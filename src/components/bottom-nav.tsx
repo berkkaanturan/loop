@@ -4,8 +4,8 @@ import { usePathname } from "next/navigation";
 import Link from "next/link";
 import {
   Home,
+  LayoutList,
   CalendarDays,
-  Plus,
   User,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -15,77 +15,55 @@ interface NavItem {
   href: string;
   label: string;
   icon: typeof Home;
-  isAction?: boolean;
 }
 
 const navItems: NavItem[] = [
   { href: "/", label: "Ana Sayfa", icon: Home },
+  { href: "/abonelikler", label: "Abonelikler", icon: LayoutList },
   { href: "/takvim", label: "Takvim", icon: CalendarDays },
-  { href: "/ekle", label: "Ekle", icon: Plus, isAction: true },
   { href: "/profil", label: "Profil", icon: User },
 ];
 
 export function BottomNav() {
   const pathname = usePathname();
 
+  // Hide bottom nav on specific pages like /ekle if we want to, but for now keep it everywhere except we can handle it later.
+  // The image shows it everywhere. Wait, the image shows it floating.
+  
+  // If the path is /login, we don't render it (already handled by layout)
+  
   return (
     <nav
       id="bottom-nav"
-      className="fixed inset-x-0 bottom-0 z-50 bg-zinc-950/80 backdrop-blur-xl border-t border-white/5 pb-safe"
+      className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2"
     >
-      <div className="mx-auto flex h-16 max-w-lg items-center justify-around px-2 relative">
+      <div className="flex h-14 items-center gap-2 rounded-full border border-white/5 bg-[#1C1C1E]/80 px-4 shadow-2xl backdrop-blur-xl">
         {navItems.map((item) => {
-          const isActive = pathname === item.href;
+          const isActive = pathname === item.href || (pathname.startsWith(item.href) && item.href !== "/");
           const Icon = item.icon;
-
-          if (item.isAction) {
-            return (
-              <div key={item.href} className="relative flex h-full w-16 items-center justify-center">
-                {/* 
-                  FAB (Floating Action Button) perfectly centered. 
-                  It breaks out of the bottom nav boundries using negative margin/absolute positioning 
-                */}
-                <Link
-                  href={item.href}
-                  id={`nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
-                  className="absolute -top-6 flex h-14 w-14 items-center justify-center rounded-full bg-indigo-500 shadow-lg shadow-indigo-500/30 transition-transform active:scale-90 hover:scale-105"
-                >
-                  <Icon className="h-7 w-7 text-white" />
-                </Link>
-              </div>
-            );
-          }
 
           return (
             <Link
               key={item.href}
               href={item.href}
-              id={`nav-${item.label.toLowerCase().replace(/\s+/g, "-")}`}
-              className="relative flex h-full min-w-[4rem] flex-1 flex-col items-center justify-center gap-1 tap-highlight-transparent"
+              className="relative flex h-10 w-12 items-center justify-center rounded-full tap-highlight-transparent"
+              aria-label={item.label}
             >
-              {/* Active indicator with framer-motion */}
               {isActive && (
                 <motion.div
-                  layoutId="bottom-nav-active"
-                  className="absolute top-0 h-[2px] w-8 rounded-full bg-indigo-500"
+                  layoutId="bottom-nav-active-pill"
+                  className="absolute inset-0 rounded-full bg-white/10"
                   transition={{ type: "spring", stiffness: 400, damping: 30 }}
                 />
               )}
               
               <Icon
                 className={cn(
-                  "h-5 w-5 transition-colors duration-200",
-                  isActive ? "text-indigo-400 drop-shadow-[0_0_8px_rgba(99,102,241,0.5)]" : "text-zinc-500"
+                  "relative z-10 h-[22px] w-[22px] transition-colors duration-200",
+                  isActive ? "text-white" : "text-zinc-500"
                 )}
+                strokeWidth={isActive ? 2.5 : 2}
               />
-              <span
-                className={cn(
-                  "text-[10px] font-medium leading-none transition-colors duration-200",
-                  isActive ? "text-indigo-400" : "text-zinc-500"
-                )}
-              >
-                {item.label}
-              </span>
             </Link>
           );
         })}
