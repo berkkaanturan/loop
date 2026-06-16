@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
-import { dbExpenseToExpense, formatCurrency } from "@/lib/data";
+import { formatCurrency } from "@/lib/data";
 import { BrandLogo } from "@/components/brand-logo";
 import { useExpenses } from "@/lib/expenses-context";
 import {

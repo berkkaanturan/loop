@@ -65,7 +65,7 @@ function LoginContent() {
     return () => clearInterval(interval);
   }, []);
 
-  const handleDragEnd = (event: any, info: any) => {
+  const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: { offset: { x: number; y: number } }) => {
     if (info.offset.x < -50) {
       setActiveIndex((prev) => (prev + 1) % SWIPER_FEATURES.length);
     } else if (info.offset.x > 50) {

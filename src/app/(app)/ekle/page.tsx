@@ -42,7 +42,6 @@ export default function EklePage() {
     expense_type: "subscription",
   });
   const [submitting, setSubmitting] = useState(false);
-  const [success, setSuccess] = useState(false);
   const [isFocused, setIsFocused] = useState(false);
   const [isDayPickerOpen, setIsDayPickerOpen] = useState(false);
 
@@ -107,7 +106,6 @@ export default function EklePage() {
 
       await refreshExpenses();
 
-      setSuccess(true);
       setTimeout(() => {
         router.push("/");
       }, 1000);
@@ -320,7 +318,7 @@ export default function EklePage() {
                   onFocus={() => setIsDayPickerOpen(true)}
                   onChange={(e) => {
                     const val = parseInt(e.target.value);
-                    setForm({ ...form, billing_day: isNaN(val) ? "" as any : val });
+                    setForm({ ...form, billing_day: isNaN(val) ? 0 : val });
                   }}
                   className="h-14 pl-12 pr-12 rounded-2xl border-0 text-base shadow-sm focus-visible:ring-1 focus-visible:ring-indigo-500 transition-all"
                   style={{ backgroundColor: "var(--app-input-bg)", color: "var(--app-text-primary)" }}

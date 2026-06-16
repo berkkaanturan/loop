@@ -36,6 +36,7 @@ export function ExpensesProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
     refreshExpenses();
   }, [refreshExpenses]);
 

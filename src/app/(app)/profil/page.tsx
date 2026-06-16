@@ -14,7 +14,7 @@ import {
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { User } from "@supabase/supabase-js";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTheme } from "@/lib/theme-context";
 import { cn } from "@/lib/utils";
@@ -72,8 +72,9 @@ export default function ProfilPage() {
       });
       if (error) throw error;
       alert("Ayarlar kaydedildi.");
-    } catch (err: any) {
-      alert(`Kaydedilirken hata: ${err.message}`);
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : "Bilinmeyen hata";
+      alert(`Kaydedilirken hata: ${message}`);
     } finally {
       setSavingConfig(false);
     }

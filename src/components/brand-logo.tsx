@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 import {
   Droplet, Flame, Home, Zap, CreditCard, Dumbbell,
   ShoppingCart, Apple, Fuel, Bus, Globe, Smartphone,
-  Banknote, Building2, Loader2, Sparkles, PawPrint, Cat, HeartPulse, TrendingUp
+  Banknote, Building2, Sparkles, PawPrint, Cat, HeartPulse, TrendingUp
 } from "lucide-react";
 
 const LUCIDE_ICONS: Record<string, React.ElementType> = {

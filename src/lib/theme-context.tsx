@@ -21,6 +21,7 @@ export function ThemeProvider({ children }: { children: ReactNode }) {
     // Read stored preference; fall back to dark
     const stored = localStorage.getItem("loop-theme") as Theme | null;
     const resolved: Theme = stored === "light" || stored === "dark" ? stored : "dark";
+    // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
     setThemeState(resolved);
     // Apply immediately so there's no flash
     const html = document.documentElement;

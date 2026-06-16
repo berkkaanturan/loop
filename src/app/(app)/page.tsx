@@ -120,15 +120,22 @@ export default function HomePage() {
   useEffect(() => {
     try {
       const stored = localStorage.getItem(paidStorageKey);
+      // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
       if (stored) setPaidIdsState(new Set(JSON.parse(stored)));
-    } catch (_) {}
+    } catch {
+      // ignore
+    }
   }, [paidStorageKey]);
 
   const handlePaid = (id: string) => {
     setPaidIdsState((prev) => {
-      const next = new Set([...prev, id]);
-      try { localStorage.setItem(paidStorageKey, JSON.stringify([...next])); } catch (_) {}
-      return next;
+      const newIds = new Set([...prev, id]);
+      try {
+        localStorage.setItem(paidStorageKey, JSON.stringify(Array.from(newIds)));
+      } catch {
+        // ignore
+      }
+      return newIds;
     });
   };
 
@@ -181,10 +188,12 @@ export default function HomePage() {
 
   const COLORS = ["#6366f1", "#14b8a6", "#ec4899", "#8b5cf6", "#f59e0b"];
 
-  const renderCustomLegend = (props: any) => {
-    const { payload } = props;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const renderCustomLegend = (props: { payload?: ReadonlyArray<any> }) => {
+    const { payload = [] } = props;
     return (
       <ul className="flex flex-wrap justify-center gap-4 mt-2">
+        {/* eslint-disable-next-line @typescript-eslint/no-explicit-any */}
         {payload.map((entry: any, index: number) => (
           <li key={`item-${index}`} className="flex items-center gap-2 text-[11px] font-medium" style={{ color: "var(--app-text-secondary)" }}>
             <span className="block h-2 w-2 rounded-full" style={{ backgroundColor: entry.color }} />
@@ -242,7 +251,7 @@ export default function HomePage() {
             >
               <Bell className="h-4 w-4" />
               {hasBell && (
-                <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-indigo-500 ring-2" style={{ ringColor: "var(--app-bg)" }} />
+                <span className="absolute top-2 right-2 h-2 w-2 rounded-full bg-indigo-500 ring-2 ring-transparent" style={{ boxShadow: "0 0 0 2px var(--app-bg)" }} />
               )}
             </button>
 
@@ -348,7 +357,7 @@ export default function HomePage() {
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: any) => `₺${formatCurrency(Number(value) || 0)}`}
+                  formatter={(value: number | string) => `₺${formatCurrency(Number(value) || 0)}`}
                   contentStyle={{ backgroundColor: "var(--app-dropdown-bg)", border: "1px solid var(--app-surface-border)", borderRadius: "16px", color: "var(--app-text-primary)", padding: "8px 12px" }}
                   itemStyle={{ color: "var(--app-text-primary)", fontSize: "13px", fontWeight: 500 }}
                 />

@@ -28,7 +28,7 @@ export default function AboneliklerPage() {
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
 
-  const handleUpdate = async (id: string, updates: any) => {
+  const handleUpdate = async (id: string, updates: Record<string, unknown>) => {
     try {
       const supabase = createClient();
       const { error } = await supabase.from("expenses").update(updates).eq("id", id);

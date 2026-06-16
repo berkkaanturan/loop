@@ -15,7 +15,7 @@ interface ExpenseDrawerProps {
   expense: Expense | null;
   isOpen: boolean;
   onClose: (open: boolean) => void;
-  onUpdate: (id: string, updates: any) => Promise<void>;
+  onUpdate: (id: string, updates: Record<string, unknown>) => Promise<void>;
   onDelete: (id: string) => Promise<void>;
 }
 
@@ -33,6 +33,7 @@ export function ExpenseDrawer({ expense, isOpen, onClose, onUpdate, onDelete }: 
 
   useEffect(() => {
     if (expense && isOpen) {
+      // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
       setForm({
         name: expense.name,
         amount: expense.amount.toString(),
