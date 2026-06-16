@@ -36,7 +36,7 @@ export default function RootLayout({
       lang="tr"
       className={`${inter.variable} ${geistMono.variable} dark h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-background text-foreground">
+      <body className="min-h-full flex flex-col bg-black text-foreground">
         {/* Main content area */}
         {children}
       </body>

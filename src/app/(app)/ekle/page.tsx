@@ -111,7 +111,7 @@ export default function EklePage() {
 
   const filteredSuggestions = PREDEFINED_EXPENSES.filter((expense) => {
     if (!form.name.trim()) return false;
-    return expense.name.toLowerCase().includes(form.name.toLowerCase());
+    return expense.name.toLocaleLowerCase("tr-TR").includes(form.name.toLocaleLowerCase("tr-TR"));
   }).slice(0, 5);
 
   const applyPreset = (preset: any) => {

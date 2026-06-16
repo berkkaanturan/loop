@@ -194,7 +194,7 @@ export default function AboneliklerPage() {
                   <div className="flex items-center gap-1.5 mt-0.5">
                     <span className="text-[10px]">{meta.icon}</span>
                     <span className="text-xs text-zinc-500 truncate">
-                      {meta.label}
+                      {meta.label} • Ayın {expense.dueDay}. günü
                     </span>
                   </div>
                 </div>
