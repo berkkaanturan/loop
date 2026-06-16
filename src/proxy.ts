@@ -2,10 +2,10 @@ import { type NextRequest } from "next/server";
 import { updateSession } from "@/lib/supabase/middleware";
 
 /**
- * Next.js Edge Middleware — runs before every matched request.
+ * Next.js Edge Proxy — runs before every matched request.
  * Delegates all auth logic (session refresh + route protection) to updateSession().
  */
-export async function middleware(request: NextRequest) {
+export async function proxy(request: NextRequest) {
   return await updateSession(request);
 }
 
@@ -18,7 +18,7 @@ export const config = {
      * - favicon.ico
      * - Public files with common extensions
      *
-     * This ensures middleware runs on every app route but NOT on static files.
+     * This ensures proxy runs on every app route but NOT on static files.
      */
     "/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp|ico|css|js)$).*)",
   ],

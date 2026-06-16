@@ -44,7 +44,7 @@ export default function AboneliklerPage() {
       const supabase = createClient();
       const { error } = await supabase.from("expenses").delete().eq("id", id);
       if (error) throw error;
-      setExpenses((prev) => prev.filter(e => e.id !== id));
+      refreshExpenses();
     } catch (err: unknown) {
       alert(`Silme hatası: ${(err as Error).message}`);
     }
