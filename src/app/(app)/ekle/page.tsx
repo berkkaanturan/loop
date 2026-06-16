@@ -5,21 +5,28 @@ import { useRouter } from "next/navigation";
 import {
   ArrowLeft,
   CheckCircle2,
-  ChevronDown,
+  Calendar,
+  Wallet,
   Loader2,
   Search,
+  Tag,
 } from "lucide-react";
-import Link from "next/link";
-import { cn } from "@/lib/utils";
+import { Input } from "@/components/ui/input";
+import { Card, CardContent } from "@/components/ui/card";
 import { createClient } from "@/lib/supabase/client";
-import type { ExpenseCategory, NewExpenseForm } from "@/lib/types";
-import { CATEGORY_META, resolveBrandDetails, PREDEFINED_EXPENSES, type PredefinedExpense } from "@/lib/data";
+import type { NewExpenseForm, ExpenseCategory } from "@/lib/types";
+import { PREDEFINED_EXPENSES } from "@/lib/data";
 import { BrandLogo } from "@/components/brand-logo";
+import { cn } from "@/lib/utils";
+import { motion, AnimatePresence } from "framer-motion";
 
-// ─── Billing day picker options ─────────────────────────────────────────────────
-const DAY_OPTIONS = Array.from({ length: 31 }, (_, i) => i + 1);
+const POPULAR_PRESETS = [
+  { name: "Netflix", domain: "netflix.com", icon: "🎬", color: "bg-red-500/15 text-red-500", category: "digital" as ExpenseCategory },
+  { name: "Spotify", domain: "spotify.com", icon: "🎧", color: "bg-green-500/15 text-green-500", category: "digital" as ExpenseCategory },
+  { name: "YouTube", domain: "youtube.com", icon: "▶️", color: "bg-red-600/15 text-red-600", category: "digital" as ExpenseCategory },
+  { name: "HBO", domain: "hbo.com", icon: "📺", color: "bg-purple-500/15 text-purple-500", category: "digital" as ExpenseCategory },
+];
 
-// ─── Page ──────────────────────────────────────────────────────────────────────
 export default function EklePage() {
   const router = useRouter();
 
@@ -27,44 +34,34 @@ export default function EklePage() {
     name: "",
     amount: "",
     category: "digital",
-    billing_day: 1,
+    billing_day: new Date().getDate(),
+    expense_type: "subscription",
   });
   const [submitting, setSubmitting] = useState(false);
-  const [showDayPicker, setShowDayPicker] = useState(false);
-  
-  // Autocomplete state
-  const [showAutocomplete, setShowAutocomplete] = useState(false);
-  const autocompleteRef = useRef<HTMLDivElement>(null);
+  const [isFocused, setIsFocused] = useState(false);
+  const [isDayPickerOpen, setIsDayPickerOpen] = useState(false);
 
-  // Close autocomplete on outside click
+  const filterRef = useRef<HTMLDivElement>(null);
+  const dayPickerRef = useRef<HTMLDivElement>(null);
+
   useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (autocompleteRef.current && !autocompleteRef.current.contains(event.target as Node)) {
-        setShowAutocomplete(false);
+    function handleClickOutside(event: MouseEvent | TouchEvent) {
+      if (filterRef.current && !filterRef.current.contains(event.target as Node)) {
+        setIsFocused(false);
+      }
+      if (dayPickerRef.current && !dayPickerRef.current.contains(event.target as Node)) {
+        setIsDayPickerOpen(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
-    return () => document.removeEventListener("mousedown", handleClickOutside);
+    document.addEventListener("touchstart", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+      document.removeEventListener("touchstart", handleClickOutside);
+    };
   }, []);
 
-  // Local Sync Filter
-  const term = form.name.trim().toLowerCase();
-  const searchResults = term.length >= 2
-    ? PREDEFINED_EXPENSES.filter(p => p.name.toLowerCase().includes(term))
-    : [];
-
-  function handleSearchResultSelect(brand: PredefinedExpense) {
-    setForm((f) => ({
-      ...f,
-      name: brand.name,
-      category: brand.category,
-      domain: brand.domain,
-    }));
-    setShowAutocomplete(false);
-  }
-
-  // ── Form submission ──────────────────────────────────────────────────────────
-  async function handleSubmit(e: React.FormEvent) {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
     if (!form.name.trim()) {
@@ -76,7 +73,7 @@ export default function EklePage() {
       alert("Geçerli bir tutar giriniz.");
       return;
     }
-    if (form.billing_day < 1 || form.billing_day > 31) {
+    if (!form.billing_day || form.billing_day < 1 || form.billing_day > 31) {
       alert("Ödeme günü 1 ile 31 arasında olmalıdır.");
       return;
     }
@@ -85,8 +82,11 @@ export default function EklePage() {
 
     try {
       const supabase = createClient();
-      const { data: { user }, error: authError } = await supabase.auth.getUser();
-      if (authError || !user) throw new Error("Oturum bulunamadı. Lütfen tekrar giriş yapın.");
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (!user) throw new Error("Oturum bulunamadı");
 
       const { error } = await supabase.from("expenses").insert({
         user_id: user.id,
@@ -95,11 +95,11 @@ export default function EklePage() {
         category: form.category,
         billing_day: form.billing_day,
         domain: form.domain || null,
+        expense_type: form.expense_type,
       });
 
       if (error) throw error;
-
-      setTimeout(() => router.push("/"), 400);
+      setTimeout(() => router.push("/abonelikler"), 400);
     } catch (err: unknown) {
       console.error("Kayıt hatası:", err);
       const message = err instanceof Error ? err.message : "Bilinmeyen bir hata oluştu.";
@@ -107,244 +107,293 @@ export default function EklePage() {
     } finally {
       setSubmitting(false);
     }
-  }
+  };
 
-  // ── Derived values ────────────────────────────────────────────────────────────
-  // If the form has a domain (from search), use it. Otherwise rely on resolveBrandDetails.
-  const { icon: defaultIcon, color, domain: defaultDomain } = resolveBrandDetails(form.name, form.category);
-  const activeDomain = form.domain || defaultDomain;
+  const filteredSuggestions = PREDEFINED_EXPENSES.filter((expense) => {
+    if (!form.name.trim()) return false;
+    return expense.name.toLowerCase().includes(form.name.toLowerCase());
+  }).slice(0, 5);
+
+  const applyPreset = (preset: any) => {
+    setForm(prev => ({
+      ...prev,
+      name: preset.name,
+      domain: preset.domain,
+      category: preset.category,
+      expense_type: "subscription",
+    }));
+  };
 
   return (
-    <div className="flex flex-col gap-0 pb-20">
-      {/* ─── Top bar ──────────────────────────────────────────── */}
-      <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-white/5 bg-zinc-950/80 px-4 py-3 backdrop-blur-xl">
-        <Link
-          href="/"
-          id="back-button"
-          className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl text-zinc-400 transition-colors hover:bg-zinc-900 hover:text-white active:scale-90"
+    <div className="flex flex-col gap-6 px-4 pt-safe pb-24 min-h-screen bg-black text-white">
+      {/* ─── Header ─────────────────────────────────────────── */}
+      <header className="flex items-center gap-4 pt-6">
+        <button
+          onClick={() => router.back()}
+          className="flex h-10 w-10 items-center justify-center rounded-full bg-zinc-900 border border-white/5 transition-all hover:bg-zinc-800 active:scale-95"
+          aria-label="Geri Dön"
         >
-          <ArrowLeft className="h-5 w-5" />
-        </Link>
-        <div className="flex-1">
-          <h1 className="text-base font-semibold text-white">Yeni Gider Ekle</h1>
-          <p className="text-xs text-zinc-400">Aylık sabit gider veya abonelik</p>
-        </div>
-      </div>
+          <ArrowLeft className="h-5 w-5 text-white" />
+        </button>
+        <h1 className="text-xl font-bold tracking-tight">Yeni Ekle</h1>
+      </header>
 
-      <form
-        id="add-expense-form"
-        onSubmit={handleSubmit}
-        className="flex flex-col gap-6 px-4 pt-6"
-        noValidate
-      >
-        {/* ─── Expense name (Autocomplete) ─────────────────────── */}
-        <div className="flex flex-col gap-2" ref={autocompleteRef}>
-          <label htmlFor="expense-name" className="text-sm font-medium text-zinc-200">
-            Gider Adı <span className="text-red-500">*</span>
-          </label>
-          <div className="relative">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-zinc-500" />
-            <input
-              id="expense-name"
-              type="text"
-              required
-              placeholder="ör. Netflix, Spotify, MacFit..."
-              value={form.name}
-              onFocus={() => setShowAutocomplete(true)}
-              onChange={(e) => {
-                setForm((f) => ({ ...f, name: e.target.value, domain: undefined }));
-                setShowAutocomplete(true);
-              }}
-              className={cn(
-                "h-12 w-full rounded-xl border border-white/10 bg-zinc-900 pl-10 pr-4 text-sm text-white",
-                "placeholder:text-zinc-600 outline-none transition-all",
-                "focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-              )}
-            />
-            
-            {/* Autocomplete Dropdown */}
-            {showAutocomplete && form.name.trim().length > 0 && (
-              <div className="absolute top-[calc(100%+8px)] left-0 right-0 z-30 max-h-60 overflow-y-auto rounded-xl border border-white/10 bg-zinc-900 shadow-xl shadow-black/50">
-                {searchResults.length > 0 ? (
-                  <div className="flex flex-col p-1">
-                    {searchResults.map((brand, idx) => (
+      {/* ─── Form ───────────────────────────────────────────── */}
+      <form onSubmit={handleSubmit} className="flex flex-col gap-6">
+        
+        {/* Tür Seçimi - Sliding Pill */}
+        <div className="flex justify-center w-full">
+          <div className="relative flex h-12 w-full max-w-[300px] items-center rounded-full bg-zinc-900/60 p-1 backdrop-blur-xl border border-white/5 shadow-inner">
+            <div className="relative flex h-full w-full">
+              {/* Sliding Background */}
+              <motion.div
+                layout
+                className="absolute top-0 bottom-0 rounded-full bg-zinc-800 shadow-sm"
+                initial={false}
+                animate={{
+                  width: "55%", 
+                  left: form.expense_type === "subscription" ? "0%" : "45%"
+                }}
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              />
+              
+              <motion.button
+                layout
+                type="button"
+                onClick={() => setForm({ ...form, expense_type: "subscription" })}
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                className={cn(
+                  "relative z-10 flex items-center justify-center rounded-full text-sm font-medium transition-colors h-full",
+                  form.expense_type === "subscription" ? "text-white w-[55%]" : "text-zinc-500 hover:text-zinc-300 w-[45%]"
+                )}
+              >
+                Abonelik
+              </motion.button>
+              <motion.button
+                layout
+                type="button"
+                onClick={() => setForm({ ...form, expense_type: "bill" })}
+                transition={{ type: "spring", stiffness: 400, damping: 30 }}
+                className={cn(
+                  "relative z-10 flex items-center justify-center rounded-full text-sm font-medium transition-colors h-full",
+                  form.expense_type === "bill" ? "text-white w-[55%]" : "text-zinc-500 hover:text-zinc-300 w-[45%]"
+                )}
+              >
+                Fatura
+              </motion.button>
+            </div>
+          </div>
+        </div>
+
+        {/* Hızlı Öneriler (Presets) */}
+        <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1 -mx-4 px-4">
+          {POPULAR_PRESETS.map((preset) => (
+            <button
+              key={preset.name}
+              type="button"
+              onClick={() => applyPreset(preset)}
+              className="flex h-10 items-center gap-2 rounded-full bg-zinc-900 border border-white/5 px-3 pr-4 text-sm font-medium text-zinc-300 transition-colors hover:bg-zinc-800 whitespace-nowrap shrink-0"
+            >
+              <div className="h-6 w-6 shrink-0">
+                <BrandLogo domain={preset.domain} name={preset.name} />
+              </div>
+              {preset.name}
+            </button>
+          ))}
+        </div>
+
+        <Card className="border border-white/5 bg-zinc-900/60 rounded-3xl overflow-visible">
+          <CardContent className="flex flex-col gap-6 p-6">
+            {/* Gider Adı & Arama */}
+            <div className="flex flex-col gap-2 relative" ref={filterRef}>
+              <label htmlFor="name" className="text-sm font-medium text-zinc-400">
+                Gider Adı
+              </label>
+              <div className="relative flex items-center">
+                {form.domain ? (
+                  <div className="absolute left-4 h-6 w-6 shrink-0 z-10">
+                    <BrandLogo domain={form.domain} name={form.name} />
+                  </div>
+                ) : (
+                  <Search className="absolute left-4 h-5 w-5 text-zinc-500 z-10" />
+                )}
+                <Input
+                  id="name"
+                  value={form.name}
+                  onChange={(e) => {
+                    setForm({ ...form, name: e.target.value, domain: undefined });
+                    setIsFocused(true);
+                  }}
+                  onFocus={() => setIsFocused(true)}
+                  className={cn(
+                    "h-14 rounded-2xl bg-zinc-800 border-white/5 text-base shadow-sm focus-visible:ring-1 focus-visible:ring-indigo-500 transition-all text-white",
+                    form.domain ? "pl-14" : "pl-12"
+                  )}
+                  placeholder="Örn. Netflix, Turkcell, Su..."
+                  autoComplete="off"
+                />
+              </div>
+
+              {/* Suggestions Dropdown */}
+              {isFocused && filteredSuggestions.length > 0 && (
+                <div className="absolute top-[80px] left-0 right-0 z-50 overflow-hidden rounded-2xl bg-zinc-800 shadow-2xl border border-white/10 animate-in fade-in slide-in-from-top-2">
+                  <div className="flex flex-col py-2">
+                    {filteredSuggestions.map((suggestion) => (
                       <button
-                        key={`search-${brand.id}-${idx}`}
+                        key={suggestion.name}
                         type="button"
-                        onClick={() => handleSearchResultSelect(brand)}
-                        className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-left transition-colors hover:bg-zinc-800 active:bg-zinc-800"
+                        onClick={() => {
+                          setForm({
+                            ...form,
+                            name: suggestion.name,
+                            domain: suggestion.domain,
+                            category: suggestion.category,
+                          });
+                          setIsFocused(false);
+                        }}
+                        className="flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-white/5"
                       >
                         <div className="h-8 w-8 shrink-0">
                           <BrandLogo
-                            domain={brand.domain}
-                            name={brand.name}
-                            fallbackIcon={brand.icon}
-                            fallbackColor={CATEGORY_META[brand.category].color}
+                            domain={suggestion.domain}
+                            name={suggestion.name}
+                            fallbackIcon={suggestion.icon}
                           />
                         </div>
-                        <div className="flex flex-col">
-                          <span className="text-sm font-medium text-zinc-200">{brand.name}</span>
-                          {brand.domain && <span className="text-[10px] text-zinc-500">{brand.domain}</span>}
-                        </div>
+                        <span className="flex-1 text-sm font-medium text-white">{suggestion.name}</span>
                       </button>
                     ))}
                   </div>
-                ) : (
-                  <div className="p-4 text-center text-sm text-zinc-500">
-                    "{form.name}" adında özel bir gider oluşturulacak.
-                  </div>
-                )}
-              </div>
-            )}
-          </div>
-        </div>
-
-        {/* ─── Amount ──────────────────────────────────────────── */}
-        <div className="flex flex-col gap-2">
-          <label htmlFor="expense-amount" className="text-sm font-medium text-zinc-200">
-            Tutar (₺) <span className="text-red-500">*</span>
-          </label>
-          <div className="relative">
-            <span className="pointer-events-none absolute left-4 top-1/2 -translate-y-1/2 text-sm font-semibold text-zinc-500">
-              ₺
-            </span>
-            <input
-              id="expense-amount"
-              type="text"
-              inputMode="decimal"
-              required
-              placeholder="0,00"
-              value={form.amount}
-              onChange={(e) => {
-                const val = e.target.value.replace(/[^0-9.,]/g, "");
-                setForm((f) => ({ ...f, amount: val }));
-              }}
-              className={cn(
-                "h-12 w-full rounded-xl border border-white/10 bg-zinc-900 pl-8 pr-4 text-sm text-white",
-                "placeholder:text-zinc-600 outline-none transition-all",
-                "focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
-              )}
-            />
-          </div>
-        </div>
-
-        {/* ─── Category selector ──────────────────────────────── */}
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium text-zinc-200">Kategori</label>
-          <div className="grid grid-cols-2 gap-2">
-            {(Object.keys(CATEGORY_META) as ExpenseCategory[]).map((cat) => {
-              const meta = CATEGORY_META[cat];
-              const active = form.category === cat;
-              return (
-                <button
-                  type="button"
-                  key={cat}
-                  onClick={() => setForm((f) => ({ ...f, category: cat }))}
-                  className={cn(
-                    "flex h-12 items-center gap-3 rounded-xl border px-4 text-sm transition-all duration-150 active:scale-95",
-                    active
-                      ? "border-indigo-500 bg-indigo-500/10 text-white"
-                      : "border-white/5 bg-zinc-900 text-zinc-400 hover:bg-zinc-800"
-                  )}
-                >
-                  <span>{meta.icon}</span>
-                  <span className="font-medium">{meta.label}</span>
-                  {active && <CheckCircle2 className="ml-auto h-4 w-4 text-indigo-500 shrink-0" />}
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* ─── Billing day ─────────────────────────────────────── */}
-        <div className="flex flex-col gap-2">
-          <label className="text-sm font-medium text-zinc-200">
-            Ödeme Günü <span className="font-normal text-zinc-500">(ayın kaçında?)</span>
-          </label>
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setShowDayPicker((v) => !v)}
-              className={cn(
-                "flex h-12 w-full items-center justify-between rounded-xl border bg-zinc-900 px-4 text-sm transition-all",
-                showDayPicker ? "border-indigo-500 ring-1 ring-indigo-500" : "border-white/10"
-              )}
-            >
-              <div className="flex items-center gap-2">
-                <span className="text-base">📅</span>
-                <span className="text-zinc-200">
-                  Her ayın <span className="font-semibold text-indigo-400">{form.billing_day}.</span> günü
-                </span>
-              </div>
-              <ChevronDown className={cn("h-4 w-4 text-zinc-500 transition-transform duration-200", showDayPicker && "rotate-180")} />
-            </button>
-
-            {showDayPicker && (
-              <div className="absolute top-[calc(100%+6px)] left-0 right-0 z-20 overflow-hidden rounded-xl border border-white/10 bg-zinc-900 shadow-2xl shadow-black/50">
-                <div className="grid grid-cols-7 gap-1 p-3">
-                  {DAY_OPTIONS.map((day) => (
-                    <button
-                      type="button"
-                      key={day}
-                      onClick={() => {
-                        setForm((f) => ({ ...f, billing_day: day }));
-                        setShowDayPicker(false);
-                      }}
-                      className={cn(
-                        "flex h-9 w-full items-center justify-center rounded-lg text-sm font-medium transition-all active:scale-90",
-                        form.billing_day === day
-                          ? "bg-indigo-500 text-white"
-                          : "text-zinc-400 hover:bg-zinc-800 hover:text-white"
-                      )}
-                    >
-                      {day}
-                    </button>
-                  ))}
                 </div>
+              )}
+            </div>
+
+            {/* Tutar */}
+            <div className="flex flex-col gap-2">
+              <label htmlFor="amount" className="text-sm font-medium text-zinc-400">
+                Aylık Tutar (₺)
+              </label>
+              <div className="relative flex items-center">
+                <Wallet className="absolute left-4 h-5 w-5 text-zinc-500" />
+                <Input
+                  id="amount"
+                  type="text"
+                  inputMode="decimal"
+                  value={form.amount}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/[^0-9.,]/g, "");
+                    setForm({ ...form, amount: val });
+                  }}
+                  className="h-14 pl-12 rounded-2xl bg-zinc-800 border-white/5 text-base font-semibold shadow-sm focus-visible:ring-1 focus-visible:ring-indigo-500 transition-all text-white"
+                  placeholder="0.00"
+                />
+                <div className="absolute right-4 text-zinc-400 font-medium">TRY</div>
               </div>
-            )}
-          </div>
-        </div>
+            </div>
 
-        {/* ─── Preview chip ─────────────────────────────────────── */}
-        <div className="mt-2 flex items-center gap-4 rounded-2xl border border-white/10 bg-zinc-900/50 p-4">
-          <div className="h-12 w-12 shrink-0">
-            <BrandLogo
-              domain={activeDomain}
-              name={form.name || "Gider"}
-              fallbackIcon={defaultIcon}
-              fallbackColor={color}
-            />
-          </div>
-          <div className="flex flex-1 flex-col gap-0.5 min-w-0">
-            <span className="text-sm font-medium text-white truncate">
-              {form.name || "Gider Adı"}
-            </span>
-            <span className="text-xs text-zinc-400">
-              {CATEGORY_META[form.category].label} · {form.billing_day}. günü
-            </span>
-          </div>
-          <div className="shrink-0 text-sm font-semibold text-white">
-            {form.amount ? `₺${form.amount}` : "₺—"}
-          </div>
-        </div>
+            {/* Fatura Kesim Tarihi - Custom Number Input + Grid Dropdown */}
+            <div className="flex flex-col gap-2 relative" ref={dayPickerRef}>
+              <label htmlFor="billing_day" className="text-sm font-medium text-zinc-400">
+                Ödeme Günü
+              </label>
+              <div className="relative flex items-center">
+                <Calendar className="absolute left-4 h-5 w-5 text-zinc-500" />
+                <Input
+                  id="billing_day"
+                  type="number"
+                  inputMode="numeric"
+                  min={1}
+                  max={31}
+                  value={form.billing_day || ""}
+                  onFocus={() => setIsDayPickerOpen(true)}
+                  onChange={(e) => {
+                    const val = parseInt(e.target.value);
+                    setForm({ ...form, billing_day: isNaN(val) ? "" as any : val });
+                  }}
+                  className="h-14 pl-12 pr-12 rounded-2xl bg-zinc-800 border-white/5 text-base shadow-sm focus-visible:ring-1 focus-visible:ring-indigo-500 transition-all text-white"
+                />
+                <div className="absolute right-4 text-sm text-zinc-500 font-medium pointer-events-none">.Gün</div>
+              </div>
 
-        {/* ─── Submit button ────────────────────────────────────── */}
+              <AnimatePresence>
+                {isDayPickerOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                    animate={{ opacity: 1, y: 0, scale: 1 }}
+                    exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                    transition={{ duration: 0.2 }}
+                    className="absolute top-[80px] left-0 right-0 z-50 p-4 rounded-2xl bg-zinc-800 shadow-2xl border border-white/10"
+                  >
+                    <div className="grid grid-cols-7 gap-2">
+                      {Array.from({ length: 31 }, (_, i) => i + 1).map(day => (
+                        <button
+                          key={day}
+                          type="button"
+                          onClick={() => {
+                            setForm({ ...form, billing_day: day });
+                            setIsDayPickerOpen(false);
+                          }}
+                          className={cn(
+                            "flex h-10 items-center justify-center rounded-xl text-sm font-medium transition-all",
+                            form.billing_day === day
+                              ? "bg-indigo-500 text-white"
+                              : "bg-zinc-900/50 text-zinc-300 hover:bg-zinc-700"
+                          )}
+                        >
+                          {day}
+                        </button>
+                      ))}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Kategori Seçimi */}
+            <div className="flex flex-col gap-2 pt-2">
+              <label className="text-sm font-medium text-zinc-400 flex items-center gap-2">
+                <Tag className="h-4 w-4" /> Kategori
+              </label>
+              <div className="grid grid-cols-2 gap-2">
+                {[
+                  { id: "digital", label: "Dijital", icon: "📱" },
+                  { id: "bank", label: "Banka", icon: "💳" },
+                  { id: "lifestyle", label: "Yaşam", icon: "💪" },
+                  { id: "other", label: "Diğer", icon: "📦" },
+                ].map((cat) => (
+                  <button
+                    key={cat.id}
+                    type="button"
+                    onClick={() => setForm({ ...form, category: cat.id as ExpenseCategory })}
+                    className={cn(
+                      "flex h-12 items-center justify-center gap-2 rounded-xl border text-sm font-medium transition-all active:scale-[0.98]",
+                      form.category === cat.id
+                        ? "border-indigo-500 bg-indigo-500/10 text-indigo-400"
+                        : "border-white/5 bg-zinc-800 text-zinc-400 hover:bg-zinc-700 hover:text-white"
+                    )}
+                  >
+                    <span>{cat.icon}</span>
+                    {cat.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Submit Button */}
         <button
           type="submit"
           disabled={submitting}
-          className={cn(
-            "flex h-14 w-full items-center justify-center gap-2 rounded-2xl mt-4",
-            "bg-indigo-500 text-white",
-            "text-base font-semibold shadow-lg shadow-indigo-500/25",
-            "transition-all duration-200 active:scale-[0.97]",
-            "disabled:cursor-not-allowed disabled:opacity-60"
-          )}
+          className="mt-4 flex h-14 w-full items-center justify-center gap-2 rounded-2xl bg-white text-black font-semibold shadow-lg shadow-white/10 transition-all active:scale-[0.98] disabled:opacity-50"
         >
           {submitting ? (
-            <><Loader2 className="h-5 w-5 animate-spin" /> Kaydediliyor…</>
+            <Loader2 className="h-5 w-5 animate-spin" />
           ) : (
-            <>Gideri Kaydet</>
+            <>
+              <CheckCircle2 className="h-5 w-5" />
+              <span>Kaydet</span>
+            </>
           )}
         </button>
       </form>

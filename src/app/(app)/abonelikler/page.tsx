@@ -4,14 +4,15 @@ import { useEffect, useState, useCallback } from "react";
 import { Plus, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import type { DbExpense, Expense, ExpenseCategory } from "@/lib/types";
+import type { DbExpense, Expense } from "@/lib/types";
 import { dbExpenseToExpense, formatCurrency, CATEGORY_META } from "@/lib/data";
 import { BrandLogo } from "@/components/brand-logo";
 import { ExpenseDrawer } from "@/components/expense-drawer";
 import { cn } from "@/lib/utils";
+import { motion } from "framer-motion";
 
 const FILTERS = [
-  { id: "all", label: "Tümü", icon: "🌐" },
+  { id: "all", label: "Hepsi", icon: null },
   { id: "digital", label: "Dijital", icon: "📱" },
   { id: "bank", label: "Banka", icon: "💳" },
   { id: "lifestyle", label: "Yaşam", icon: "💪" },
@@ -21,7 +22,7 @@ const FILTERS = [
 export default function AboneliklerPage() {
   const [expenses, setExpenses] = useState<Expense[]>([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<"subscriptions" | "bills">("subscriptions");
+  const [activeTab, setActiveTab] = useState<"subscription" | "bill">("subscription");
   const [activeFilter, setActiveFilter] = useState("all");
   
   // Drawer state
@@ -77,7 +78,7 @@ export default function AboneliklerPage() {
 
   const filteredExpenses = expenses.filter(e => {
     if (activeFilter !== "all" && e.category !== activeFilter) return false;
-    // For now we treat all as subscriptions or bills just to show UI toggle, normally you'd filter by type.
+    if (e.expense_type !== activeTab) return false;
     return true; 
   });
 
@@ -85,36 +86,50 @@ export default function AboneliklerPage() {
     <div className="flex flex-col gap-6 px-4 pt-safe pb-32 min-h-screen bg-black">
       {/* ─── Header ─────────────────────────────────────────── */}
       <header className="flex items-center justify-between pt-6">
-        {/* Toggle Pill */}
-        <div className="flex h-12 w-[240px] items-center rounded-full bg-zinc-900/80 p-1 backdrop-blur-xl border border-white/5 shadow-inner">
-          <button
-            onClick={() => setActiveTab("subscriptions")}
-            className={cn(
-              "flex-1 rounded-full text-sm font-medium transition-all duration-300 h-full",
-              activeTab === "subscriptions" 
-                ? "bg-zinc-800 text-white shadow-sm" 
-                : "text-zinc-500 hover:text-zinc-300"
-            )}
-          >
-            Abonelikler
-          </button>
-          <button
-            onClick={() => setActiveTab("bills")}
-            className={cn(
-              "flex-1 rounded-full text-sm font-medium transition-all duration-300 h-full",
-              activeTab === "bills" 
-                ? "bg-zinc-800 text-white shadow-sm" 
-                : "text-zinc-500 hover:text-zinc-300"
-            )}
-          >
-            Faturalar
-          </button>
+        {/* Toggle Pill (Glass UI) */}
+        <div className="relative flex h-12 w-[240px] items-center rounded-full bg-zinc-900/60 p-1 backdrop-blur-xl border border-white/5 shadow-inner">
+          <div className="relative flex h-full w-full">
+            {/* Sliding Background */}
+            <motion.div
+              layout
+              className="absolute top-0 bottom-0 rounded-full bg-zinc-800 shadow-sm"
+              initial={false}
+              animate={{
+                width: "55%", // Active tab is wider
+                left: activeTab === "subscription" ? "0%" : "45%"
+              }}
+              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+            />
+            
+            <motion.button
+              layout
+              onClick={() => setActiveTab("subscription")}
+              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              className={cn(
+                "relative z-10 flex items-center justify-center rounded-full text-sm font-medium transition-colors h-full",
+                activeTab === "subscription" ? "text-white w-[55%]" : "text-zinc-500 hover:text-zinc-300 w-[45%]"
+              )}
+            >
+              Abonelikler
+            </motion.button>
+            <motion.button
+              layout
+              onClick={() => setActiveTab("bill")}
+              transition={{ type: "spring", stiffness: 400, damping: 30 }}
+              className={cn(
+                "relative z-10 flex items-center justify-center rounded-full text-sm font-medium transition-colors h-full",
+                activeTab === "bill" ? "text-white w-[55%]" : "text-zinc-500 hover:text-zinc-300 w-[45%]"
+              )}
+            >
+              Faturalar
+            </motion.button>
+          </div>
         </div>
 
         {/* Add Button */}
         <Link
           href="/ekle"
-          className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-900/80 backdrop-blur-xl border border-white/5 text-zinc-400 transition-all hover:text-white hover:bg-zinc-800 active:scale-95"
+          className="flex h-12 w-12 items-center justify-center rounded-full bg-zinc-900/60 backdrop-blur-xl border border-white/5 text-zinc-400 transition-all hover:text-white hover:bg-zinc-800 active:scale-95 shadow-sm"
         >
           <Plus className="h-5 w-5" />
         </Link>
@@ -133,7 +148,7 @@ export default function AboneliklerPage() {
                 : "bg-zinc-900/60 text-zinc-400 border-white/5 hover:bg-zinc-800"
             )}
           >
-            <span>{filter.icon}</span>
+            {filter.icon && <span>{filter.icon}</span>}
             {filter.label}
           </button>
         ))}
@@ -147,7 +162,7 @@ export default function AboneliklerPage() {
           </div>
         ) : filteredExpenses.length === 0 ? (
           <div className="flex flex-col items-center justify-center py-10 text-center text-zinc-500">
-            <p className="text-sm">Bu kategoride gider bulunamadı.</p>
+            <p className="text-sm">Bu kategoride kayıt bulunamadı.</p>
           </div>
         ) : (
           filteredExpenses.map((expense) => {
@@ -159,7 +174,7 @@ export default function AboneliklerPage() {
                   setSelectedExpense(expense);
                   setIsDrawerOpen(true);
                 }}
-                className="flex h-[72px] items-center gap-4 rounded-2xl bg-zinc-900/60 p-3 pr-4 text-left transition-all active:scale-[0.98] border border-transparent hover:border-white/5"
+                className="flex h-[72px] items-center gap-4 rounded-3xl bg-zinc-900/40 p-3 pr-5 text-left transition-all active:scale-[0.98] border border-white/5 hover:border-white/10 shadow-sm"
               >
                 {/* Logo */}
                 <div className="h-12 w-12 shrink-0">
@@ -184,17 +199,16 @@ export default function AboneliklerPage() {
                   </div>
                 </div>
 
-                {/* Right: Amount & Subtext */}
-                <div className="flex flex-col items-end justify-center shrink-0">
+                {/* Right: Amount centered vertically */}
+                <div className="flex items-center justify-center shrink-0">
                   <div className="flex items-baseline gap-1">
-                    <span className="text-sm font-semibold text-white/90">
+                    <span className="text-[15px] font-semibold text-white/90">
                       {formatCurrency(expense.amount)}
                     </span>
                     <span className="text-[10px] font-medium text-zinc-500 uppercase tracking-wider">
                       TRY
                     </span>
                   </div>
-                  <span className="text-[10px] text-zinc-500 mt-0.5">aylık</span>
                 </div>
               </button>
             );

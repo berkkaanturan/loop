@@ -147,16 +147,18 @@ export function resolveBrandDetails(
  */
 export function dbExpenseToExpense(db: DbExpense): Expense {
   const { icon, color, domain: defaultDomain } = resolveBrandDetails(db.name, db.category);
+  const meta = CATEGORY_META[db.category];
   return {
     id: db.id,
     name: db.name,
     category: db.category,
-    amount: Number(db.amount),
+    amount: db.amount,
     currency: "₺",
     dueDay: db.billing_day,
-    icon,
-    color,
     domain: db.domain || defaultDomain,
+    expense_type: db.expense_type || "subscription",
+    icon: icon || meta?.icon,
+    color: color || meta?.color || "bg-zinc-800 text-zinc-300",
     isActive: true,
   };
 }

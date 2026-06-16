@@ -6,7 +6,7 @@ import {
   Home,
   LayoutList,
   CalendarDays,
-  User,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
@@ -21,7 +21,7 @@ const navItems: NavItem[] = [
   { href: "/", label: "Ana Sayfa", icon: Home },
   { href: "/abonelikler", label: "Abonelikler", icon: LayoutList },
   { href: "/takvim", label: "Takvim", icon: CalendarDays },
-  { href: "/profil", label: "Profil", icon: User },
+  { href: "/profil", label: "Profil", icon: Settings },
 ];
 
 export function BottomNav() {

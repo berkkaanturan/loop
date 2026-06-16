@@ -4,32 +4,45 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   LogOut,
-  User,
-  Mail,
-  Calendar,
-  Shield,
-  ChevronRight,
+  Settings,
+  User as UserIcon,
+  Bell,
+  Wallet,
   Loader2,
 } from "lucide-react";
-import type { User as SupabaseUser } from "@supabase/supabase-js";
 import { createClient } from "@/lib/supabase/client";
-import { Card, CardContent } from "@/components/ui/card";
+import { User } from "@supabase/supabase-js";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
 
 export default function ProfilPage() {
   const router = useRouter();
-  const [user, setUser] = useState<SupabaseUser | null>(null);
+  const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [savingConfig, setSavingConfig] = useState(false);
+
+  // Local state for settings
+  const [budgetLimit, setBudgetLimit] = useState("5000");
+  const [notificationDays, setNotificationDays] = useState("7");
 
   useEffect(() => {
-    const supabase = createClient();
-    supabase.auth.getUser().then(({ data }) => {
-      setUser(data.user);
+    async function loadUser() {
+      const supabase = createClient();
+      const { data } = await supabase.auth.getUser();
+      if (data.user) {
+        setUser(data.user);
+        const limit = data.user.user_metadata?.budget_limit;
+        const days = data.user.user_metadata?.notification_days;
+        if (limit) setBudgetLimit(limit.toString());
+        if (days) setNotificationDays(days.toString());
+      }
       setLoading(false);
-    });
+    }
+    loadUser();
   }, []);
 
-  async function handleLogout() {
+  const handleSignOut = async () => {
     setLoggingOut(true);
     const supabase = createClient();
     const { error } = await supabase.auth.signOut();
@@ -39,188 +52,133 @@ export default function ProfilPage() {
       setLoggingOut(false);
       return;
     }
-
     console.log("Başarıyla çıkış yapıldı.");
     router.push("/login");
-    router.refresh(); // force middleware to re-evaluate
-  }
+    router.refresh();
+  };
 
-  // ── Helpers ─────────────────────────────────────────────────────────────────
-  const displayName =
-    user?.user_metadata?.full_name ??
-    user?.user_metadata?.name ??
-    user?.email?.split("@")[0] ??
-    "Kullanıcı";
+  const saveSettings = async () => {
+    setSavingConfig(true);
+    try {
+      const supabase = createClient();
+      const { error } = await supabase.auth.updateUser({
+        data: {
+          budget_limit: Number(budgetLimit),
+          notification_days: Number(notificationDays),
+        }
+      });
+      if (error) throw error;
+      alert("Ayarlar kaydedildi.");
+    } catch (err: any) {
+      alert(`Kaydedilirken hata: ${err.message}`);
+    } finally {
+      setSavingConfig(false);
+    }
+  };
 
-  const avatarUrl: string | undefined =
-    user?.user_metadata?.avatar_url ?? user?.user_metadata?.picture;
-
-  const createdAt = user?.created_at
-    ? new Date(user.created_at).toLocaleDateString("tr-TR", {
-        day: "numeric",
-        month: "long",
-        year: "numeric",
-      })
-    : null;
-
-  // ── Loading skeleton ─────────────────────────────────────────────────────────
   if (loading) {
     return (
-      <div className="flex flex-col gap-6 px-4 pt-safe pt-8 pb-6 animate-pulse">
-        <div className="flex flex-col items-center gap-4">
-          <div className="h-24 w-24 rounded-3xl bg-card" />
-          <div className="h-5 w-36 rounded-full bg-card" />
-          <div className="h-3.5 w-48 rounded-full bg-card" />
-        </div>
-        <div className="flex flex-col gap-2">
-          {[1, 2, 3].map((i) => (
-            <div key={i} className="h-14 rounded-2xl bg-card" />
-          ))}
-        </div>
+      <div className="flex min-h-[50vh] items-center justify-center">
+        <Loader2 className="h-6 w-6 animate-spin text-zinc-500" />
       </div>
     );
   }
 
+  const name =
+    user?.user_metadata?.full_name ?? user?.user_metadata?.name ?? "Kullanıcı";
+  const avatarUrl = user?.user_metadata?.avatar_url;
+
   return (
-    <div className="flex flex-col gap-6 px-4 pt-safe pb-6">
-      {/* ─── Header ───────────────────────────────────────────── */}
-      <header className="pt-6">
-        <h1 className="text-2xl font-bold tracking-tight">Profil</h1>
-        <p className="mt-1 text-sm text-muted-foreground">
-          Hesap bilgilerin ve ayarların
-        </p>
+    <div className="flex flex-col gap-6 px-4 pt-safe pb-32 min-h-screen bg-black">
+      <header className="flex items-center justify-between pt-6">
+        <h1 className="text-2xl font-bold tracking-tight text-white">Ayarlar</h1>
       </header>
 
-      {/* ─── Avatar + Name ────────────────────────────────────── */}
-      <div className="flex flex-col items-center gap-4 py-2">
-        {/* Avatar */}
-        <div className="relative">
-          {avatarUrl ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={avatarUrl}
-              alt={displayName}
-              className="h-24 w-24 rounded-3xl object-cover ring-2 ring-border"
-            />
-          ) : (
-            <div className="flex h-24 w-24 items-center justify-center rounded-3xl bg-gradient-to-br from-indigo-500 to-violet-600 text-3xl font-bold text-white ring-2 ring-border">
-              {displayName.charAt(0).toUpperCase()}
-            </div>
-          )}
-          {/* Online indicator */}
-          <span className="absolute -bottom-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-background ring-2 ring-background">
-            <span className="h-3 w-3 rounded-full bg-emerald-400" />
-          </span>
-        </div>
-
-        <div className="flex flex-col items-center gap-1">
-          <p className="text-xl font-bold tracking-tight">{displayName}</p>
-          <p className="text-sm text-muted-foreground">{user?.email}</p>
-        </div>
-      </div>
-
-      {/* ─── Info cards ───────────────────────────────────────── */}
-      <div className="flex flex-col gap-2">
-        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground/60 px-1 mb-1">
-          Hesap Bilgileri
-        </p>
-
-        <Card className="border-0 bg-card ring-0">
-          <CardContent className="flex flex-col divide-y divide-border p-0">
-            {/* Name row */}
-            <div className="flex h-14 items-center gap-4 px-4">
-              <User className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <div className="flex flex-1 flex-col gap-0.5 min-w-0">
-                <span className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">
-                  Ad Soyad
-                </span>
-                <span className="text-sm font-medium truncate">{displayName}</span>
-              </div>
-            </div>
-
-            {/* Email row */}
-            <div className="flex h-14 items-center gap-4 px-4">
-              <Mail className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <div className="flex flex-1 flex-col gap-0.5 min-w-0">
-                <span className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">
-                  E-posta
-                </span>
-                <span className="text-sm font-medium truncate">{user?.email}</span>
-              </div>
-            </div>
-
-            {/* Joined row */}
-            {createdAt && (
-              <div className="flex h-14 items-center gap-4 px-4">
-                <Calendar className="h-4 w-4 shrink-0 text-muted-foreground" />
-                <div className="flex flex-1 flex-col gap-0.5">
-                  <span className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">
-                    Üyelik Tarihi
-                  </span>
-                  <span className="text-sm font-medium">{createdAt}</span>
-                </div>
-              </div>
+      {/* Profil Özeti */}
+      <Card className="border border-white/5 bg-zinc-900/60 rounded-3xl">
+        <CardContent className="flex items-center gap-4 p-6">
+          <div className="flex h-16 w-16 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-zinc-800">
+            {avatarUrl ? (
+              <img
+                src={avatarUrl}
+                alt="Avatar"
+                className="h-full w-full object-cover"
+                referrerPolicy="no-referrer"
+              />
+            ) : (
+              <UserIcon className="h-8 w-8 text-zinc-400" />
             )}
+          </div>
+          <div className="flex flex-col gap-1">
+            <h2 className="text-lg font-semibold text-white">{name}</h2>
+            <p className="text-sm text-zinc-400">{user?.email}</p>
+          </div>
+        </CardContent>
+      </Card>
 
-            {/* Auth provider row */}
-            <div className="flex h-14 items-center gap-4 px-4">
-              <Shield className="h-4 w-4 shrink-0 text-muted-foreground" />
-              <div className="flex flex-1 flex-col gap-0.5">
-                <span className="text-[10px] text-muted-foreground/60 uppercase tracking-wider">
-                  Giriş Yöntemi
-                </span>
-                <span className="text-sm font-medium">Google OAuth</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+      {/* Tercihler */}
+      <Card className="border border-white/5 bg-zinc-900/60 rounded-3xl">
+        <CardHeader className="p-6 pb-2">
+          <CardTitle className="text-sm font-semibold text-white flex items-center gap-2">
+            <Settings className="h-4 w-4 text-zinc-400" />
+            Tercihler
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="flex flex-col gap-5 p-6 pt-2">
+          <div className="flex flex-col gap-2">
+            <label className="text-sm text-zinc-400 flex items-center gap-2">
+              <Wallet className="h-4 w-4" /> Aylık Bütçe Limiti (₺)
+            </label>
+            <Input
+              type="number"
+              value={budgetLimit}
+              onChange={(e) => setBudgetLimit(e.target.value)}
+              className="bg-zinc-800 border-white/5 text-white h-12 rounded-xl px-4"
+            />
+          </div>
 
-      {/* ─── Action rows ──────────────────────────────────────── */}
-      <div className="flex flex-col gap-2">
-        <p className="text-xs font-medium uppercase tracking-wider text-muted-foreground/60 px-1 mb-1">
-          Ayarlar
-        </p>
+          <div className="flex flex-col gap-2">
+            <label className="text-sm text-zinc-400 flex items-center gap-2">
+              <Bell className="h-4 w-4" /> Ödeme Hatırlatıcı (Gün)
+            </label>
+            <Input
+              type="number"
+              value={notificationDays}
+              onChange={(e) => setNotificationDays(e.target.value)}
+              className="bg-zinc-800 border-white/5 text-white h-12 rounded-xl px-4"
+              placeholder="Örn: 7"
+            />
+          </div>
 
-        {/* Placeholder settings rows */}
-        {[
-          { icon: "🔔", label: "Bildirim Tercihleri", sub: "Yakında" },
-          { icon: "💰", label: "Bütçe Limiti", sub: "₺5.000 / ay" },
-        ].map((item) => (
           <button
-            key={item.label}
-            disabled
-            className="flex h-14 items-center gap-4 rounded-2xl bg-card px-4 text-left opacity-50"
+            onClick={saveSettings}
+            disabled={savingConfig}
+            className="flex h-12 items-center justify-center rounded-xl bg-white text-black font-semibold transition-all active:scale-[0.98] disabled:opacity-50 mt-2"
           >
-            <span className="text-lg">{item.icon}</span>
-            <div className="flex flex-1 flex-col gap-0.5">
-              <span className="text-sm font-medium">{item.label}</span>
-              <span className="text-xs text-muted-foreground">{item.sub}</span>
-            </div>
-            <ChevronRight className="h-4 w-4 text-muted-foreground/40" />
+            {savingConfig ? (
+              <Loader2 className="h-5 w-5 animate-spin" />
+            ) : (
+              "Değişiklikleri Kaydet"
+            )}
           </button>
-        ))}
-      </div>
+        </CardContent>
+      </Card>
 
-      {/* ─── Logout button ────────────────────────────────────── */}
-      <div className="flex flex-col gap-3 pt-2">
+      <div className="flex flex-col gap-2 mt-4 px-2">
         <button
-          id="logout-button"
-          onClick={handleLogout}
+          onClick={handleSignOut}
           disabled={loggingOut}
-          className="flex h-14 w-full items-center justify-center gap-3 rounded-2xl border border-destructive/40 bg-destructive/8 text-sm font-semibold text-destructive transition-all duration-200 hover:bg-destructive/15 active:scale-[0.97] disabled:cursor-not-allowed disabled:opacity-60"
+          className="flex h-12 items-center gap-2 text-red-500 font-medium transition-all active:scale-95 disabled:opacity-50 w-fit"
         >
           {loggingOut ? (
             <Loader2 className="h-5 w-5 animate-spin" />
           ) : (
-            <LogOut className="h-5 w-5" />
+            <>
+              <LogOut className="h-5 w-5" />
+              <span>Çıkış Yap</span>
+            </>
           )}
-          {loggingOut ? "Çıkış yapılıyor…" : "Çıkış Yap"}
         </button>
-
-        <p className="text-center text-xs text-muted-foreground/50">
-          Çıkış yaptığında tüm veriler güvende kalır.
-        </p>
       </div>
     </div>
   );

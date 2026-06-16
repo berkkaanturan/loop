@@ -15,6 +15,7 @@ export interface DbExpense {
   category: ExpenseCategory;
   billing_day: number; // 1–31
   domain?: string;     // text (nullable) - for Brandfetch
+  expense_type?: "subscription" | "bill";
   created_at: string;  // ISO timestamp
 }
 
@@ -34,6 +35,7 @@ export interface Expense {
   icon?: string;    // emoji or undefined
   color: string;    // Tailwind classes like "bg-red-500/15 text-red-400"
   domain?: string;  // domain for icon.horse
+  expense_type: "subscription" | "bill";
   isActive: boolean;
 }
 
@@ -57,4 +59,5 @@ export interface NewExpenseForm {
   category: ExpenseCategory;
   billing_day: number;
   domain?: string;       // captured from Brandfetch search
+  expense_type: "subscription" | "bill";
 }
