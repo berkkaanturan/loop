@@ -45,7 +45,8 @@ export interface UpcomingPayment {
   amount: number;
   currency: "₺";
   dueDate: string; // ISO date string
-  daysUntil: number;
+  daysUntil: number; // negative = past
+  isPast: boolean;
   icon?: string;
   color: string;
   domain?: string;

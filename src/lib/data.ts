@@ -165,9 +165,10 @@ export function dbExpenseToExpense(db: DbExpense): Expense {
 
 // ─── Pure computation helpers ──────────────────────────────────────────────────
 
-export function getUpcomingPayments(
+export function getNotificationPayments(
   allExpenses: Expense[],
-  daysAhead: number = 7
+  daysAhead: number = 7,
+  pastDays: number = 7
 ): UpcomingPayment[] {
   const today = new Date();
   const currentDay = today.getDate();
@@ -176,32 +177,55 @@ export function getUpcomingPayments(
 
   return allExpenses
     .map((expense) => {
-      let daysUntil: number;
-      let dueDate: Date;
-
-      if (expense.dueDay >= currentDay) {
-        dueDate = new Date(currentYear, currentMonth, expense.dueDay);
-        daysUntil = expense.dueDay - currentDay;
-      } else {
-        const lastDayOfMonth = new Date(currentYear, currentMonth + 1, 0).getDate();
-        dueDate = new Date(currentYear, currentMonth + 1, expense.dueDay);
-        daysUntil = lastDayOfMonth - currentDay + expense.dueDay;
+      // Past: dueDay was earlier this month
+      if (expense.dueDay < currentDay) {
+        const daysPast = currentDay - expense.dueDay;
+        const dueDate = new Date(currentYear, currentMonth, expense.dueDay);
+        if (daysPast <= pastDays) {
+          return {
+            id: expense.id,
+            name: expense.name,
+            amount: expense.amount,
+            currency: expense.currency,
+            dueDate: dueDate.toISOString(),
+            daysUntil: -daysPast,
+            isPast: true,
+            icon: expense.icon,
+            color: expense.color,
+            domain: expense.domain,
+          } as UpcomingPayment;
+        }
+        return null;
       }
 
-      return {
-        id: expense.id,
-        name: expense.name,
-        amount: expense.amount,
-        currency: expense.currency,
-        dueDate: dueDate.toISOString(),
-        daysUntil,
-        icon: expense.icon,
-        color: expense.color,
-        domain: expense.domain,
-      };
+      // Upcoming: dueDay is today or later in this month
+      const daysUntil = expense.dueDay - currentDay;
+      const dueDate = new Date(currentYear, currentMonth, expense.dueDay);
+      if (daysUntil <= daysAhead) {
+        return {
+          id: expense.id,
+          name: expense.name,
+          amount: expense.amount,
+          currency: expense.currency,
+          dueDate: dueDate.toISOString(),
+          daysUntil,
+          isPast: false,
+          icon: expense.icon,
+          color: expense.color,
+          domain: expense.domain,
+        } as UpcomingPayment;
+      }
+      return null;
     })
-    .filter((p) => p.daysUntil <= daysAhead && p.daysUntil >= 0)
+    .filter((p): p is UpcomingPayment => p !== null)
     .sort((a, b) => a.daysUntil - b.daysUntil);
+}
+
+export function getUpcomingPayments(
+  allExpenses: Expense[],
+  daysAhead: number = 7
+): UpcomingPayment[] {
+  return getNotificationPayments(allExpenses, daysAhead, 0);
 }
 
 export function getTotalMonthlyExpense(allExpenses: Expense[]): number {
