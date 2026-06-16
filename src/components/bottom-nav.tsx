@@ -27,19 +27,22 @@ const navItems: NavItem[] = [
 export function BottomNav() {
   const pathname = usePathname();
 
-  // Hide bottom nav on specific pages like /ekle if we want to, but for now keep it everywhere except we can handle it later.
-  // The image shows it everywhere. Wait, the image shows it floating.
-  
-  // If the path is /login, we don't render it (already handled by layout)
-  
   return (
     <nav
       id="bottom-nav"
       className="fixed bottom-6 left-1/2 z-50 -translate-x-1/2"
     >
-      <div className="flex h-14 items-center gap-2 rounded-full border border-white/5 bg-[#1C1C1E]/80 px-4 shadow-2xl backdrop-blur-xl">
+      <div
+        className="flex h-14 items-center gap-2 rounded-full border px-4 shadow-2xl backdrop-blur-xl"
+        style={{
+          backgroundColor: "var(--app-nav-bg)",
+          borderColor: "var(--app-surface-border)",
+        }}
+      >
         {navItems.map((item) => {
-          const isActive = pathname === item.href || (pathname.startsWith(item.href) && item.href !== "/");
+          const isActive =
+            pathname === item.href ||
+            (pathname.startsWith(item.href) && item.href !== "/");
           const Icon = item.icon;
 
           return (
@@ -52,15 +55,18 @@ export function BottomNav() {
               {isActive && (
                 <motion.div
                   layoutId="bottom-nav-active-pill"
-                  className="absolute inset-0 rounded-full bg-white/10"
+                  className="absolute inset-0 rounded-full"
+                  style={{ backgroundColor: "rgba(127,127,127,0.15)" }}
                   transition={{ type: "spring", stiffness: 400, damping: 30 }}
                 />
               )}
-              
+
               <Icon
                 className={cn(
                   "relative z-10 h-[22px] w-[22px] transition-colors duration-200",
-                  isActive ? "text-white" : "text-zinc-500"
+                  isActive
+                    ? "text-[var(--app-text-primary)]"
+                    : "text-[var(--app-text-secondary)]"
                 )}
                 strokeWidth={isActive ? 2.5 : 2}
               />

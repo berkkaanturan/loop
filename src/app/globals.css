@@ -48,37 +48,29 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
-/*
- * LOOP — Strict Dark Mode
- * Background: zinc-950 (#09090b)
- * Surface/Card: zinc-900 (#18181b)
- * Primary Accent: indigo-500 (#6366f1)
- */
-:root {
-  /* We force dark mode only — no light mode support */
+/* ──────────────────────────────────────────────────────────────────────────────
+ * LOOP — Dark theme (default)
+ * ────────────────────────────────────────────────────────────────────────────── */
+:root,
+.dark {
   --background: #09090b;
   --foreground: #fafafa;
   --card: #18181b;
   --card-foreground: #fafafa;
   --popover: #18181b;
   --popover-foreground: #fafafa;
-  /* Primary = Indigo-500 */
   --primary: #6366f1;
   --primary-foreground: #ffffff;
-  /* Secondary = zinc-800 */
   --secondary: #27272a;
   --secondary-foreground: #fafafa;
-  /* Muted = zinc-800 */
   --muted: #27272a;
   --muted-foreground: #a1a1aa;
-  /* Accent = zinc-800 */
   --accent: #27272a;
   --accent-foreground: #fafafa;
   --destructive: #ef4444;
   --border: rgba(255, 255, 255, 0.08);
   --input: rgba(255, 255, 255, 0.12);
   --ring: #6366f1;
-  /* Chart colors — indigo spectrum */
   --chart-1: #6366f1;
   --chart-2: #818cf8;
   --chart-3: #a5b4fc;
@@ -93,6 +85,66 @@
   --sidebar-accent-foreground: #fafafa;
   --sidebar-border: rgba(255, 255, 255, 0.08);
   --sidebar-ring: #6366f1;
+
+  /* App-specific semantic tokens */
+  --app-bg: #000000;
+  --app-surface: rgba(24, 24, 27, 0.60);
+  --app-surface-border: rgba(255, 255, 255, 0.06);
+  --app-card-bg: rgba(24, 24, 27, 0.40);
+  --app-text-primary: #ffffff;
+  --app-text-secondary: rgba(255, 255, 255, 0.5);
+  --app-nav-bg: rgba(28, 28, 30, 0.80);
+  --app-input-bg: #27272a;
+  --app-dropdown-bg: #18181b;
+}
+
+/* ──────────────────────────────────────────────────────────────────────────────
+ * LOOP — Light theme (Apple Glass — liquid silver)
+ * ────────────────────────────────────────────────────────────────────────────── */
+.light {
+  --background: #f2f2f7;
+  --foreground: #1c1c1e;
+  --card: rgba(255, 255, 255, 0.72);
+  --card-foreground: #1c1c1e;
+  --popover: rgba(255, 255, 255, 0.88);
+  --popover-foreground: #1c1c1e;
+  --primary: #6366f1;
+  --primary-foreground: #ffffff;
+  --secondary: rgba(0, 0, 0, 0.06);
+  --secondary-foreground: #1c1c1e;
+  --muted: rgba(0, 0, 0, 0.05);
+  --muted-foreground: #6b7280;
+  --accent: rgba(0, 0, 0, 0.05);
+  --accent-foreground: #1c1c1e;
+  --destructive: #ef4444;
+  --border: rgba(0, 0, 0, 0.08);
+  --input: rgba(0, 0, 0, 0.06);
+  --ring: #6366f1;
+  --chart-1: #6366f1;
+  --chart-2: #818cf8;
+  --chart-3: #a5b4fc;
+  --chart-4: #4f46e5;
+  --chart-5: #3730a3;
+  --radius: 0.75rem;
+  --sidebar: rgba(255, 255, 255, 0.72);
+  --sidebar-foreground: #1c1c1e;
+  --sidebar-primary: #6366f1;
+  --sidebar-primary-foreground: #ffffff;
+  --sidebar-accent: rgba(0, 0, 0, 0.05);
+  --sidebar-accent-foreground: #1c1c1e;
+  --sidebar-border: rgba(0, 0, 0, 0.08);
+  --sidebar-ring: #6366f1;
+
+  /* App-specific semantic tokens */
+  --app-bg: #f2f2f7;
+  --app-surface: rgba(255, 255, 255, 0.72);
+  --app-surface-border: rgba(0, 0, 0, 0.07);
+  --app-card-bg: rgba(255, 255, 255, 0.55);
+  --app-text-primary: #1c1c1e;
+  --app-text-secondary: rgba(60, 60, 67, 0.6);
+  --app-nav-bg: rgba(255, 255, 255, 0.75);
+  --app-input-bg: rgba(0, 0, 0, 0.05);
+  --app-dropdown-bg: rgba(255, 255, 255, 0.95);
 }
 
 @layer base {
@@ -101,13 +153,17 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-color: var(--app-bg);
+    color: var(--app-text-primary);
   }
   html {
     @apply font-sans;
   }
 }
 
-/* Custom utility classes for the LOOP app */
+/* ──────────────────────────────────────────────────────────────────────────────
+ * Theme-aware utility classes
+ * ────────────────────────────────────────────────────────────────────────────── */
 @layer utilities {
   /* Safe area padding for mobile devices with notch/nav bar */
   .pb-safe {
@@ -116,6 +172,15 @@
   .pt-safe {
     padding-top: env(safe-area-inset-top, 0px);
   }
+
+  /* Semantic surface classes that flip with theme */
+  .app-bg       { background-color: var(--app-bg); }
+  .app-surface  { background-color: var(--app-surface); border-color: var(--app-surface-border); }
+  .app-card     { background-color: var(--app-card-bg); border-color: var(--app-surface-border); }
+  .app-text     { color: var(--app-text-primary); }
+  .app-muted    { color: var(--app-text-secondary); }
+  .app-input    { background-color: var(--app-input-bg); }
+  .app-dropdown { background-color: var(--app-dropdown-bg); }
 }
 
 /* Smooth scroll behavior */
@@ -124,53 +189,26 @@ html {
   -webkit-tap-highlight-color: transparent;
 }
 
-/* Custom scrollbar for the app */
-::-webkit-scrollbar {
-  width: 4px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: #27272a;
-  border-radius: 2px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: #3f3f46;
-}
+/* Custom scrollbar */
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #27272a; border-radius: 2px; }
+::-webkit-scrollbar-thumb:hover { background: #3f3f46; }
 
 /* Wave animation for greeting emoji */
 @keyframes wave {
-  0%,
-  100% {
-    transform: rotate(0deg);
-  }
-  10% {
-    transform: rotate(14deg);
-  }
-  20% {
-    transform: rotate(-8deg);
-  }
-  30% {
-    transform: rotate(14deg);
-  }
-  40% {
-    transform: rotate(-4deg);
-  }
-  50% {
-    transform: rotate(10deg);
-  }
-  60%,
-  100% {
-    transform: rotate(0deg);
-  }
+  0%, 100% { transform: rotate(0deg); }
+  10% { transform: rotate(14deg); }
+  20% { transform: rotate(-8deg); }
+  30% { transform: rotate(14deg); }
+  40% { transform: rotate(-4deg); }
+  50% { transform: rotate(10deg); }
+  60%, 100% { transform: rotate(0deg); }
 }
 
-/* Hide scrollbar for horizontal scroll areas */
+/* Hide scrollbar */
 .scrollbar-none {
   -ms-overflow-style: none;
   scrollbar-width: none;
 }
-.scrollbar-none::-webkit-scrollbar {
-  display: none;
-}
+.scrollbar-none::-webkit-scrollbar { display: none; }
