@@ -13,7 +13,7 @@ import {
 } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { createClient } from "@/lib/supabase/client";
-import type { ExpenseCategory } from "@/lib/types";
+import type { ExpenseCategory, NewExpenseForm } from "@/lib/types";
 import { PREDEFINED_EXPENSES } from "@/lib/data";
 import { BrandLogo } from "@/components/brand-logo";
 import { CategoryIcon } from "@/components/category-icon";
@@ -28,11 +28,13 @@ const POPULAR_PRESETS = [
   { name: "HBO", domain: "hbo.com", icon: "📺", color: "bg-purple-500/15 text-purple-500", category: "digital" as ExpenseCategory },
 ];
 
+type Preset = typeof POPULAR_PRESETS[0];
+
 export default function EklePage() {
   const router = useRouter();
   const { refreshExpenses } = useExpenses();
 
-  const [form, setForm] = useState<any>({
+  const [form, setForm] = useState<NewExpenseForm>({
     name: "",
     amount: "",
     category: "digital",
@@ -123,8 +125,8 @@ export default function EklePage() {
     return expense.name.toLocaleLowerCase("tr-TR").includes(form.name.toLocaleLowerCase("tr-TR"));
   }).slice(0, 5);
 
-  const applyPreset = (preset: any) => {
-    setForm(prev => ({
+  const applyPreset = (preset: Preset) => {
+    setForm((prev: NewExpenseForm) => ({
       ...prev,
       name: preset.name,
       domain: preset.domain,
