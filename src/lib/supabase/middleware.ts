@@ -36,6 +36,9 @@ export async function updateSession(request: NextRequest) {
         );
       },
     },
+    cookieOptions: {
+      maxAge: 31536000,
+    },
   });
 
   // IMPORTANT: getUser() must be called to refresh the token.

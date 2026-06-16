@@ -14,8 +14,15 @@ import { createClient } from "@/lib/supabase/server";
  *       https://yourdomain.com/auth/callback  (prod)
  */
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
+  const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
+  const forwardedHost = request.headers.get("x-forwarded-host");
+  const isLocalEnv = process.env.NODE_ENV === "development";
+  
+  // Construct the correct origin even behind proxies (like Vercel)
+  const origin = forwardedHost
+    ? `https://${forwardedHost}`
+    : new URL(request.url).origin;
 
   // Optional: `next` param allows redirecting to a specific page after login
   const next = searchParams.get("next") ?? "/";

@@ -28,5 +28,8 @@ export async function createClient() {
         }
       },
     },
+    cookieOptions: {
+      maxAge: 31536000,
+    },
   });
 }
