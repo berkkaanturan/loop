@@ -424,9 +424,18 @@ export default function HomePage() {
             );
           })}
           {expenses.length === 0 && !loading && (
-            <div className="text-center py-8 text-sm rounded-3xl border" style={{ color: "var(--app-text-secondary)", backgroundColor: "var(--app-card-bg)", borderColor: "var(--app-surface-border)" }}>
-              Henüz gider eklenmedi.
-            </div>
+            <Link
+              href="/ekle"
+              className="group flex flex-col items-center justify-center gap-3 py-10 rounded-3xl border border-dashed transition-all active:scale-[0.98]"
+              style={{ backgroundColor: "var(--app-card-bg)", borderColor: "var(--app-surface-border)" }}
+            >
+              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-500/10 text-indigo-500 group-hover:bg-indigo-500/20 transition-colors">
+                <Plus className="h-6 w-6" />
+              </div>
+              <span className="text-sm font-medium" style={{ color: "var(--app-text-secondary)" }}>
+                Henüz gider eklenmedi. Eklemek için dokunun.
+              </span>
+            </Link>
           )}
         </div>
       </div>
