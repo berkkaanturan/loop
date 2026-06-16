@@ -204,6 +204,9 @@ export default function HomePage() {
     );
   };
 
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const tooltipFormatter = (value: any) => `₺${formatCurrency(Number(value) || 0)}`;
+
   const formatNotifDay = (p: UpcomingPayment) => {
     const day = new Date(p.dueDate).getDate();
     if (p.daysUntil === 0) return "Bugün";
@@ -357,7 +360,7 @@ export default function HomePage() {
                   ))}
                 </Pie>
                 <Tooltip
-                  formatter={(value: number | string) => `₺${formatCurrency(Number(value) || 0)}`}
+                  formatter={tooltipFormatter}
                   contentStyle={{ backgroundColor: "var(--app-dropdown-bg)", border: "1px solid var(--app-surface-border)", borderRadius: "16px", color: "var(--app-text-primary)", padding: "8px 12px" }}
                   itemStyle={{ color: "var(--app-text-primary)", fontSize: "13px", fontWeight: 500 }}
                 />
