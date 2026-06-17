@@ -17,12 +17,14 @@ const FILTERS = [
   { id: "all", label: "Hepsi" },
   { id: "digital", label: "Dijital" },
   { id: "bank", label: "Banka" },
-  { id: "lifestyle", label: "Yaşam" },
+  { id: "social", label: "Sosyal" },
+  { id: "travel", label: "Seyahat" },
+  { id: "personal_care", label: "Kişisel Bakım" },
   { id: "other", label: "Diğer" },
 ];
 
 export default function AboneliklerPage() {
-  const { expenses, loading, refreshExpenses } = useExpenses();
+  const { expenses, loading, refreshExpenses, currencySymbol } = useExpenses();
   const [activeTab, setActiveTab] = useState<"subscription" | "bill">("subscription");
   const [activeFilter, setActiveFilter] = useState("all");
   const [selectedExpense, setSelectedExpense] = useState<Expense | null>(null);
@@ -165,7 +167,7 @@ export default function AboneliklerPage() {
                 <div className="flex items-center justify-center shrink-0">
                   <div className="flex items-baseline gap-1">
                     <span className="text-[15px] font-semibold" style={{ color: "var(--app-text-primary)" }}>
-                      ₺{formatCurrency(expense.amount)}
+                      {currencySymbol}{formatCurrency(expense.amount)}
                     </span>
                   </div>
                 </div>

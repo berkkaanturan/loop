@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2, ChevronDown } from "lucide-react";
 import { formatCurrency } from "@/lib/data";
 import { BrandLogo } from "@/components/brand-logo";
 import { useExpenses } from "@/lib/expenses-context";
@@ -16,14 +16,24 @@ import {
   isSameDay,
   isToday,
   getDay,
+  setMonth,
+  setYear,
 } from "date-fns";
 import { tr } from "date-fns/locale";
 import { cn } from "@/lib/utils";
+import { AnimatePresence, motion } from "framer-motion";
+
+const MONTHS = [
+  "Ocak", "Şubat", "Mart", "Nisan", "Mayıs", "Haziran",
+  "Temmuz", "Ağustos", "Eylül", "Ekim", "Kasım", "Aralık"
+];
 
 export default function TakvimPage() {
-  const { expenses, loading } = useExpenses();
+  const { expenses, loading, currencySymbol } = useExpenses();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<Date>(new Date());
+  const [showPicker, setShowPicker] = useState(false);
+  const [pickerYear, setPickerYear] = useState(currentDate.getFullYear());
 
   const nextMonth = () => setCurrentDate(addMonths(currentDate, 1));
   const prevMonth = () => setCurrentDate(subMonths(currentDate, 1));
@@ -32,35 +42,51 @@ export default function TakvimPage() {
   const monthEnd = endOfMonth(currentDate);
   const daysInMonth = eachDayOfInterval({ start: monthStart, end: monthEnd });
 
-  // Monday-first padding: getDay returns 0=Sun…6=Sat → convert to Mon-first
-  const startDow = getDay(monthStart); // 0=Sun
+  const startDow = getDay(monthStart);
   const paddingDays = Array.from({ length: startDow === 0 ? 6 : startDow - 1 });
 
   const selectedDayExpenses = expenses.filter(
     (e) => e.dueDay === selectedDate.getDate() && isSameMonth(selectedDate, currentDate)
   );
 
+  const handlePickMonth = (monthIndex: number) => {
+    const newDate = setYear(setMonth(currentDate, monthIndex), pickerYear);
+    setCurrentDate(newDate);
+    setShowPicker(false);
+  };
+
   return (
     <div
       className="flex flex-col gap-6 px-4 pt-safe pb-28"
       style={{ backgroundColor: "var(--app-bg)", minHeight: "100dvh" }}
     >
-      {/* ─── Header ─────────────────────────────────────────── */}
+      {/* Header */}
       <header className="flex items-center justify-between pt-6">
         <h1 className="text-2xl font-bold tracking-tight" style={{ color: "var(--app-text-primary)" }}>
           Takvim
         </h1>
       </header>
 
-      {/* ─── Calendar Grid ───────────────────────────────────── */}
+      {/* Calendar Grid */}
       <div
         className="rounded-3xl p-4 border backdrop-blur-xl"
         style={{ backgroundColor: "var(--app-surface)", borderColor: "var(--app-surface-border)" }}
       >
         <div className="flex items-center justify-between mb-4 px-2">
-          <span className="text-lg font-medium capitalize" style={{ color: "var(--app-text-primary)" }}>
-            {format(currentDate, "MMMM yyyy", { locale: tr })}
-          </span>
+          {/* Clickable Month/Year Heading */}
+          <button
+            onClick={() => { setShowPicker((v) => !v); setPickerYear(currentDate.getFullYear()); }}
+            className="flex items-center gap-1 rounded-xl px-2 py-1 transition-colors active:scale-95"
+            style={{ color: "var(--app-text-primary)" }}
+          >
+            <span className="text-lg font-medium capitalize">
+              {format(currentDate, "MMMM yyyy", { locale: tr })}
+            </span>
+            <ChevronDown
+              className={cn("h-4 w-4 transition-transform", showPicker && "rotate-180")}
+              style={{ color: "var(--app-text-secondary)" }}
+            />
+          </button>
           <div className="flex gap-2">
             <button
               onClick={prevMonth}
@@ -78,6 +104,59 @@ export default function TakvimPage() {
             </button>
           </div>
         </div>
+
+        {/* Month/Year Picker Dropdown */}
+        <AnimatePresence>
+          {showPicker && (
+            <motion.div
+              initial={{ opacity: 0, y: -8, scale: 0.97 }}
+              animate={{ opacity: 1, y: 0, scale: 1 }}
+              exit={{ opacity: 0, y: -8, scale: 0.97 }}
+              transition={{ duration: 0.18 }}
+              className="mb-4 rounded-2xl border overflow-hidden"
+              style={{ backgroundColor: "var(--app-dropdown-bg)", borderColor: "var(--app-surface-border)" }}
+            >
+              {/* Year selector */}
+              <div className="flex items-center justify-between px-4 py-3 border-b" style={{ borderColor: "var(--app-surface-border)" }}>
+                <button
+                  onClick={() => setPickerYear(y => y - 1)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full"
+                  style={{ backgroundColor: "var(--app-input-bg)", color: "var(--app-text-secondary)" }}
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <span className="text-base font-semibold" style={{ color: "var(--app-text-primary)" }}>{pickerYear}</span>
+                <button
+                  onClick={() => setPickerYear(y => y + 1)}
+                  className="flex h-8 w-8 items-center justify-center rounded-full"
+                  style={{ backgroundColor: "var(--app-input-bg)", color: "var(--app-text-secondary)" }}
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
+              </div>
+              {/* Month grid */}
+              <div className="grid grid-cols-3 gap-1 p-3">
+                {MONTHS.map((month, i) => {
+                  const isActive = i === currentDate.getMonth() && pickerYear === currentDate.getFullYear();
+                  return (
+                    <button
+                      key={month}
+                      onClick={() => handlePickMonth(i)}
+                      className="flex h-10 items-center justify-center rounded-xl text-sm font-medium transition-all active:scale-95"
+                      style={
+                        isActive
+                          ? { backgroundColor: "#6366f1", color: "#ffffff" }
+                          : { backgroundColor: "var(--app-input-bg)", color: "var(--app-text-primary)" }
+                      }
+                    >
+                      {month}
+                    </button>
+                  );
+                })}
+              </div>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         <div className="grid grid-cols-7 gap-1 text-center mb-2">
           {["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"].map((day) => (
@@ -127,7 +206,7 @@ export default function TakvimPage() {
         </div>
       </div>
 
-      {/* ─── Selected Day Details ────────────────────────────── */}
+      {/* Selected Day Details */}
       <div className="flex flex-col gap-3">
         <h2 className="text-sm font-medium px-2" style={{ color: "var(--app-text-secondary)" }}>
           {format(selectedDate, "d MMMM yyyy", { locale: tr })}
@@ -154,7 +233,7 @@ export default function TakvimPage() {
                   </span>
                 </div>
                 <div className="shrink-0 text-sm font-semibold" style={{ color: "var(--app-text-primary)" }}>
-                  ₺{formatCurrency(expense.amount)}
+                  {currencySymbol}{formatCurrency(expense.amount)}
                 </div>
               </div>
             ))}

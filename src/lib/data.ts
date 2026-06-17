@@ -19,10 +19,20 @@ export const CATEGORY_META: Record<ExpenseCategory, CategoryMeta> = {
     icon: "💳",
     color: "bg-blue-500/15 text-blue-400",
   },
-  lifestyle: {
-    label: "Yaşam Tarzı",
-    icon: "💪",
+  social: {
+    label: "Sosyal",
+    icon: "🍻",
     color: "bg-orange-500/15 text-orange-400",
+  },
+  travel: {
+    label: "Seyahat",
+    icon: "✈️",
+    color: "bg-teal-500/15 text-teal-400",
+  },
+  personal_care: {
+    label: "Kişisel Bakım",
+    icon: "💆",
+    color: "bg-pink-500/15 text-pink-400",
   },
   other: {
     label: "Diğer",
@@ -30,6 +40,13 @@ export const CATEGORY_META: Record<ExpenseCategory, CategoryMeta> = {
     color: "bg-zinc-500/15 text-zinc-400",
   },
 };
+
+export const CURRENCIES = [
+  { code: "TRY", symbol: "₺", label: "Türk Lirası", flag: "🇹🇷" },
+  { code: "USD", symbol: "$", label: "Amerikan Doları", flag: "🇺🇸" },
+  { code: "EUR", symbol: "€", label: "Euro", flag: "🇪🇺" },
+  { code: "GBP", symbol: "£", label: "İngiliz Sterlini", flag: "🇬🇧" },
+];
 
 // ─── Icon / color resolution ───────────────────────────────────────────────────
 
@@ -39,34 +56,36 @@ export interface PredefinedExpense {
   domain?: string;
   icon?: string;
   category: ExpenseCategory;
+  /** If set, autocomplete sets this expense_type when selected */
+  expenseType?: "subscription" | "bill";
 }
 
 export const PREDEFINED_EXPENSES: PredefinedExpense[] = [
-  // Digital & Streaming
-  { id: "netflix", name: "Netflix", domain: "netflix.com", category: "digital" },
-  { id: "spotify", name: "Spotify", domain: "spotify.com", category: "digital" },
-  { id: "youtube", name: "YouTube Premium", domain: "youtube.com", category: "digital" },
-  { id: "amazon", name: "Amazon Prime", domain: "amazon.com.tr", category: "digital" },
-  { id: "disney", name: "Disney+", domain: "disneyplus.com", category: "digital" },
-  { id: "exxen", name: "Exxen", domain: "exxen.com", category: "digital" },
-  { id: "blutv", name: "BluTV", domain: "blutv.com", category: "digital" },
-  { id: "mubi", name: "Mubi", domain: "mubi.com", category: "digital" },
-  { id: "hbo", name: "HBO", domain: "hbo.com", category: "digital" },
-  { id: "apple", name: "Apple Music", domain: "apple.com", category: "digital" },
+  // Digital & Streaming (Subscriptions)
+  { id: "netflix", name: "Netflix", domain: "netflix.com", category: "digital", expenseType: "subscription" },
+  { id: "spotify", name: "Spotify", domain: "spotify.com", category: "digital", expenseType: "subscription" },
+  { id: "youtube", name: "YouTube Premium", domain: "youtube.com", category: "digital", expenseType: "subscription" },
+  { id: "amazon", name: "Amazon Prime", domain: "amazon.com.tr", category: "digital", expenseType: "subscription" },
+  { id: "disney", name: "Disney+", domain: "disneyplus.com", category: "digital", expenseType: "subscription" },
+  { id: "exxen", name: "Exxen", domain: "exxen.com", category: "digital", expenseType: "subscription" },
+  { id: "blutv", name: "BluTV", domain: "blutv.com", category: "digital", expenseType: "subscription" },
+  { id: "mubi", name: "Mubi", domain: "mubi.com", category: "digital", expenseType: "subscription" },
+  { id: "hbo", name: "HBO", domain: "hbo.com", category: "digital", expenseType: "subscription" },
+  { id: "apple", name: "Apple Music", domain: "apple.com", category: "digital", expenseType: "subscription" },
 
-  // Telecom & ISP
-  { id: "turknet", name: "Turknet", domain: "turk.net", category: "digital" },
-  { id: "turkcell", name: "Turkcell", domain: "turkcell.com.tr", category: "digital" },
-  { id: "vodafone", name: "Vodafone", domain: "vodafone.com.tr", category: "digital" },
-  { id: "turktelekom", name: "Türk Telekom", domain: "turktelekom.com.tr", category: "digital" },
+  // Telecom & ISP — recurring BILLS
+  { id: "turknet", name: "Turknet", domain: "turk.net", category: "digital", expenseType: "bill" },
+  { id: "turkcell", name: "Turkcell", domain: "turkcell.com.tr", category: "digital", expenseType: "bill" },
+  { id: "vodafone", name: "Vodafone", domain: "vodafone.com.tr", category: "digital", expenseType: "bill" },
+  { id: "turktelekom", name: "Türk Telekom", domain: "turktelekom.com.tr", category: "digital", expenseType: "bill" },
 
-  // Gaming & Entertainment
-  { id: "steam", name: "Steam", domain: "steampowered.com", category: "digital" },
-  { id: "psplus", name: "PlayStation Plus", domain: "playstation.com", category: "digital" },
-  { id: "xbox", name: "Xbox Game Pass", domain: "xbox.com", category: "digital" },
-  { id: "epic", name: "Epic Games", domain: "epicgames.com", category: "digital" },
-  { id: "riot", name: "Riot Games", domain: "riotgames.com", category: "digital" },
-  { id: "csfloat", name: "CSFloat", domain: "csfloat.com", category: "digital" },
+  // Gaming & Entertainment (Subscriptions)
+  { id: "steam", name: "Steam", domain: "steampowered.com", category: "digital", expenseType: "subscription" },
+  { id: "psplus", name: "PlayStation Plus", domain: "playstation.com", category: "digital", expenseType: "subscription" },
+  { id: "xbox", name: "Xbox Game Pass", domain: "xbox.com", category: "digital", expenseType: "subscription" },
+  { id: "epic", name: "Epic Games", domain: "epicgames.com", category: "digital", expenseType: "subscription" },
+  { id: "riot", name: "Riot Games", domain: "riotgames.com", category: "digital", expenseType: "subscription" },
+  { id: "csfloat", name: "CSFloat", domain: "csfloat.com", category: "digital", expenseType: "subscription" },
 
   // Banks, Finance & Investments
   { id: "garanti", name: "Garanti BBVA", domain: "garantibbva.com.tr", category: "bank" },
@@ -80,37 +99,37 @@ export const PREDEFINED_EXPENSES: PredefinedExpense[] = [
   { id: "bes", name: "Bireysel Emeklilik / BES", icon: "Building2", category: "bank" },
   { id: "yatirim", name: "Yatırım Fonu", icon: "TrendingUp", category: "bank" },
 
-  // Software, Education & Tools
-  { id: "deepstash", name: "Deepstash Pro", domain: "deepstash.com", category: "digital" },
-  { id: "brilliant", name: "Brilliant Premium", domain: "brilliant.org", category: "digital" },
-  { id: "chatgpt", name: "ChatGPT", domain: "openai.com", category: "digital" },
-  { id: "gemini", name: "Gemini", domain: "gemini.google.com", category: "digital" },
-  { id: "claude", name: "Claude", domain: "claude.ai", category: "digital" },
-  { id: "github", name: "GitHub", domain: "github.com", category: "digital" },
-  { id: "notion", name: "Notion", domain: "notion.so", category: "digital" },
-  { id: "googleone", name: "Google One", domain: "google.com", category: "digital" },
-  { id: "icloud", name: "iCloud", domain: "apple.com", category: "digital" },
-  { id: "vercel", name: "Vercel", domain: "vercel.com", category: "digital" },
-  { id: "supabase", name: "Supabase", domain: "supabase.com", category: "digital" },
-  { id: "adobe", name: "Adobe", domain: "adobe.com", category: "digital" },
+  // Software, Education & Tools (Subscriptions)
+  { id: "deepstash", name: "Deepstash Pro", domain: "deepstash.com", category: "digital", expenseType: "subscription" },
+  { id: "brilliant", name: "Brilliant Premium", domain: "brilliant.org", category: "digital", expenseType: "subscription" },
+  { id: "chatgpt", name: "ChatGPT", domain: "openai.com", category: "digital", expenseType: "subscription" },
+  { id: "gemini", name: "Gemini", domain: "gemini.google.com", category: "digital", expenseType: "subscription" },
+  { id: "claude", name: "Claude", domain: "claude.ai", category: "digital", expenseType: "subscription" },
+  { id: "github", name: "GitHub", domain: "github.com", category: "digital", expenseType: "subscription" },
+  { id: "notion", name: "Notion", domain: "notion.so", category: "digital", expenseType: "subscription" },
+  { id: "googleone", name: "Google One", domain: "google.com", category: "digital", expenseType: "subscription" },
+  { id: "icloud", name: "iCloud", domain: "apple.com", category: "digital", expenseType: "subscription" },
+  { id: "vercel", name: "Vercel", domain: "vercel.com", category: "digital", expenseType: "subscription" },
+  { id: "supabase", name: "Supabase", domain: "supabase.com", category: "digital", expenseType: "subscription" },
+  { id: "adobe", name: "Adobe", domain: "adobe.com", category: "digital", expenseType: "subscription" },
 
   // Health, Fitness & Lifestyle
-  { id: "stndrd", name: "STNDRD Workout & Fitness", domain: "stndrd.app", icon: "Dumbbell", category: "lifestyle" },
-  { id: "macfit", name: "MacFit", domain: "macfit.com.tr", category: "lifestyle" },
-  { id: "yemeksepeti", name: "Yemeksepeti", domain: "yemeksepeti.com", category: "lifestyle" },
-  { id: "getir", name: "Getir", domain: "getir.com", category: "lifestyle" },
-  { id: "trendyol", name: "Trendyol", domain: "trendyol.com", category: "lifestyle" },
-  { id: "hepsiburada", name: "Hepsiburada", domain: "hepsiburada.com", category: "lifestyle" },
+  { id: "stndrd", name: "STNDRD Workout & Fitness", domain: "stndrd.app", icon: "Dumbbell", category: "social", expenseType: "subscription" },
+  { id: "macfit", name: "MacFit", domain: "macfit.com.tr", category: "social", expenseType: "subscription" },
+  { id: "yemeksepeti", name: "Yemeksepeti", domain: "yemeksepeti.com", category: "social" },
+  { id: "getir", name: "Getir", domain: "getir.com", category: "social" },
+  { id: "trendyol", name: "Trendyol", domain: "trendyol.com", category: "social" },
+  { id: "hepsiburada", name: "Hepsiburada", domain: "hepsiburada.com", category: "social" },
 
-  // Utilities & Housing
-  { id: "aidat", name: "Site/Bina Aidatı", icon: "Home", category: "other" },
-  { id: "dogalgaz", name: "Doğalgaz Faturası", icon: "Flame", category: "other" },
-  { id: "su", name: "Su Faturası", icon: "Droplet", category: "other" },
-  { id: "elektrik", name: "Elektrik Faturası", icon: "Zap", category: "other" },
-  { id: "kira", name: "Ev Kirası", icon: "Home", category: "other" },
+  // Utilities & Housing (Bills)
+  { id: "aidat", name: "Site/Bina Aidatı", icon: "Home", category: "other", expenseType: "bill" },
+  { id: "dogalgaz", name: "Doğalgaz Faturası", icon: "Flame", category: "other", expenseType: "bill" },
+  { id: "su", name: "Su Faturası", icon: "Droplet", category: "other", expenseType: "bill" },
+  { id: "elektrik", name: "Elektrik Faturası", icon: "Zap", category: "other", expenseType: "bill" },
+  { id: "kira", name: "Ev Kirası", icon: "Home", category: "other", expenseType: "bill" },
 
   // Pets & Daily
-  { id: "kedi_mamasi", name: "Kedi Maması", icon: "Paw", category: "other" }, // mapped to Dog / Paw ? Lucide doesn't have Paw. Let's use generic or we can map to a specific one. Wait, let's use 'Heart' or something if Paw isn't available. Oh wait, "Paw/Cat" icon requested. Lucide has 'Dog' or 'Cat'? It has 'Cat'. Let's use 'Cat'. Wait, 'Cat' might not be imported. We will handle imports.
+  { id: "kedi_mamasi", name: "Kedi Maması", icon: "Cat", category: "other" },
   { id: "kedi_kumu", name: "Kedi Kumu", icon: "Cat", category: "other" },
   { id: "veteriner", name: "Veteriner", icon: "HeartPulse", category: "other" },
   { id: "market", name: "Market Alışverişi", icon: "ShoppingCart", category: "other" }
@@ -146,14 +165,18 @@ export function resolveBrandDetails(
  * Map a raw Supabase row to the rich UI Expense object.
  */
 export function dbExpenseToExpense(db: DbExpense): Expense {
-  const { icon, color, domain: defaultDomain } = resolveBrandDetails(db.name, db.category);
-  const meta = CATEGORY_META[db.category];
+  let safeCategory = db.category;
+  // @ts-expect-error - legacy database category mapping
+  if (safeCategory === "lifestyle") safeCategory = "social";
+  if (!CATEGORY_META[safeCategory]) safeCategory = "other";
+
+  const { icon, color, domain: defaultDomain } = resolveBrandDetails(db.name, safeCategory);
+  const meta = CATEGORY_META[safeCategory];
   return {
     id: db.id,
     name: db.name,
-    category: db.category,
+    category: safeCategory,
     amount: db.amount,
-    currency: "₺",
     dueDay: db.billing_day,
     domain: db.domain || defaultDomain,
     expense_type: db.expense_type || "subscription",
@@ -181,13 +204,13 @@ export function getNotificationPayments(
       if (expense.dueDay < currentDay) {
         const daysPast = currentDay - expense.dueDay;
         const dueDate = new Date(currentYear, currentMonth, expense.dueDay);
+        const lastMonthDue = new Date(currentYear, currentMonth, expense.dueDay);
         if (daysPast <= pastDays) {
           return {
             id: expense.id,
             name: expense.name,
             amount: expense.amount,
-            currency: expense.currency,
-            dueDate: dueDate.toISOString(),
+            dueDate: lastMonthDue.toISOString(),
             daysUntil: -daysPast,
             isPast: true,
             icon: expense.icon,
@@ -206,7 +229,6 @@ export function getNotificationPayments(
           id: expense.id,
           name: expense.name,
           amount: expense.amount,
-          currency: expense.currency,
           dueDate: dueDate.toISOString(),
           daysUntil,
           isPast: false,

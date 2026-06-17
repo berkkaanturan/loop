@@ -1,25 +1,23 @@
 "use client";
 
-import { useEffect, useState, useCallback, useRef } from "react";
-import { Plus, Bell, Check } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
+import { Bell, Plus, Pencil, X, Check, Search, Calendar as CalendarIcon, PieChart as PieChartIcon, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
-import type { DbExpense, Expense, UpcomingPayment } from "@/lib/types";
+import type { UpcomingPayment } from "@/lib/types";
 import {
-  dbExpenseToExpense,
   getTotalMonthlyExpense,
   formatCurrency,
   getNotificationPayments,
-  CATEGORY_META,
 } from "@/lib/data";
 import { BrandLogo } from "@/components/brand-logo";
-import { CategoryIcon } from "@/components/category-icon";
 import { useExpenses } from "@/lib/expenses-context";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
-// ─── Tick Button — wave fill only ────────────────────────────────────────────
+// ─── Tick Button ─────────────────────────────────────────────────────────────
 function TickButton({ onConfirm }: { onConfirm: () => void }) {
   const [phase, setPhase] = useState<"idle" | "filling" | "done">("idle");
 
@@ -43,7 +41,6 @@ function TickButton({ onConfirm }: { onConfirm: () => void }) {
       }}
       aria-label="Ödendi"
     >
-      {/* Liquid wave fill */}
       <AnimatePresence>
         {phase === "filling" && (
           <motion.div
@@ -54,7 +51,6 @@ function TickButton({ onConfirm }: { onConfirm: () => void }) {
           />
         )}
       </AnimatePresence>
-
       <Check
         className={cn(
           "relative z-10 h-4 w-4 transition-colors duration-300",
@@ -71,15 +67,20 @@ function NotifItem({
   label,
   onPaid,
   past,
+  currencySymbol,
 }: {
   payment: UpcomingPayment;
   label: string;
   onPaid: (id: string) => void;
   past: boolean;
+  currencySymbol: string;
 }) {
   return (
-    <div className="relative flex items-center gap-3 p-2.5 rounded-2xl" style={{ backgroundColor: "var(--app-input-bg)" }}>
-      <div className="h-10 w-10 shrink-0">
+    <div
+      className="flex h-[72px] items-center gap-4 rounded-3xl p-3 pr-5 text-left transition-all border shadow-sm"
+      style={{ backgroundColor: "var(--app-card-bg)", borderColor: "var(--app-surface-border)" }}
+    >
+      <div className="h-12 w-12 shrink-0">
         <BrandLogo
           domain={payment.domain}
           name={payment.name}
@@ -87,40 +88,130 @@ function NotifItem({
           fallbackColor={payment.color}
         />
       </div>
-      <div className="flex flex-col flex-1 min-w-0">
-        <span className="text-sm font-medium truncate" style={{ color: "var(--app-text-primary)" }}>
+      <div className="flex flex-1 flex-col justify-center min-w-0">
+        <span className="text-[15px] font-medium truncate leading-snug" style={{ color: "var(--app-text-primary)" }}>
           {payment.name}
         </span>
         <span
-          className={cn("text-[11px] font-medium", past ? "text-red-400" : payment.daysUntil === 0 ? "text-yellow-400" : "text-zinc-400")}
+          className={cn("text-xs truncate mt-0.5", past ? "text-red-400" : payment.daysUntil === 0 ? "text-yellow-400" : "text-zinc-400")}
         >
           {label}
         </span>
       </div>
-      <span className="text-sm font-semibold shrink-0 mr-1" style={{ color: "var(--app-text-primary)" }}>
-        ₺{formatCurrency(payment.amount)}
-      </span>
-      <TickButton onConfirm={() => onPaid(payment.id)} />
+      <div className="flex items-center justify-center shrink-0 gap-3">
+        <div className="flex items-baseline gap-1">
+          <span className="text-[15px] font-semibold" style={{ color: "var(--app-text-primary)" }}>
+            {currencySymbol}{formatCurrency(payment.amount)}
+          </span>
+        </div>
+        <TickButton onConfirm={() => onPaid(payment.id)} />
+      </div>
     </div>
   );
 }
 
+// ─── Budget Edit Modal ─────────────────────────────────────────────────────────
+function BudgetEditModal({
+  currentBudget,
+  onSave,
+  onClose,
+  currencySymbol,
+}: {
+  currentBudget: number;
+  onSave: (value: number) => Promise<void>;
+  onClose: () => void;
+  currencySymbol: string;
+}) {
+  const [value, setValue] = useState(currentBudget.toString());
+  const [saving, setSaving] = useState(false);
+
+  const handleSave = async () => {
+    const parsed = parseFloat(value.replace(",", "."));
+    if (isNaN(parsed) || parsed <= 0) return;
+    setSaving(true);
+    await onSave(parsed);
+    setSaving(false);
+    onClose();
+  };
+
+  return (
+    <motion.div
+      className="fixed inset-0 z-50 flex items-end justify-center"
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      {/* Backdrop */}
+      <motion.div
+        className="absolute inset-0 bg-black/50 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <motion.div
+        className="relative w-full max-w-lg rounded-t-3xl border p-6 pb-safe"
+        initial={{ y: 80, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        exit={{ y: 80, opacity: 0 }}
+        transition={{ type: "spring", stiffness: 400, damping: 35 }}
+        style={{ backgroundColor: "var(--app-bg)", borderColor: "var(--app-surface-border)" }}
+      >
+        <div className="flex items-center justify-between mb-6">
+          <h3 className="text-lg font-bold" style={{ color: "var(--app-text-primary)" }}>Aylık Bütçe</h3>
+          <button
+            onClick={onClose}
+            className="flex h-8 w-8 items-center justify-center rounded-full"
+            style={{ backgroundColor: "var(--app-input-bg)", color: "var(--app-text-secondary)" }}
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+        <div className="relative flex items-center mb-4">
+          <span className="absolute left-4 text-lg font-semibold" style={{ color: "var(--app-text-secondary)" }}>{currencySymbol}</span>
+          <input
+            type="number"
+            inputMode="numeric"
+            value={value}
+            onChange={(e) => setValue(e.target.value)}
+            autoFocus
+            className="h-14 w-full rounded-2xl border pl-10 pr-4 text-xl font-bold outline-none transition-colors focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500"
+            style={{
+              backgroundColor: "var(--app-input-bg)",
+              borderColor: "var(--app-surface-border)",
+              color: "var(--app-text-primary)",
+            }}
+            placeholder="5000"
+          />
+        </div>
+        <button
+          onClick={handleSave}
+          disabled={saving}
+          className="flex h-14 w-full items-center justify-center rounded-2xl font-semibold transition-all active:scale-[0.98] disabled:opacity-50"
+          style={{ backgroundColor: "#6366f1", color: "#ffffff" }}
+        >
+          {saving ? "Kaydediliyor…" : "Kaydet"}
+        </button>
+      </motion.div>
+    </motion.div>
+  );
+}
+
 // ─── Main Dashboard ───────────────────────────────────────────────────────────
-export default function HomePage() {
-  const { expenses, loading } = useExpenses();
-  const [displayName, setDisplayName] = useState<string>("");
+export default function DashboardPage() {
+  const router = useRouter();
+  const { expenses, loading, refreshExpenses, currencySymbol } = useExpenses();
+  const [userName, setUserName] = useState<string>("İsimsiz Kullanıcı");
   const [budgetLimit, setBudgetLimit] = useState<number>(5000);
   const [notificationDays, setNotificationDays] = useState<number>(7);
+  const [isUserLoading, setIsUserLoading] = useState(true);
   const [isNotificationsOpen, setIsNotificationsOpen] = useState(false);
+  const [isBudgetModalOpen, setIsBudgetModalOpen] = useState(false);
   const [paidIds, setPaidIdsState] = useState<Set<string>>(new Set());
 
-  // Persist paid IDs keyed by current month so they reset naturally next month
   const paidStorageKey = `loop-paid-${new Date().getFullYear()}-${new Date().getMonth() + 1}`;
 
   useEffect(() => {
     try {
       const stored = localStorage.getItem(paidStorageKey);
-      // eslint-disable-next-line react-hooks/exhaustive-deps, react-hooks/set-state-in-effect
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       if (stored) setPaidIdsState(new Set(JSON.parse(stored)));
     } catch {
       // ignore
@@ -158,15 +249,29 @@ export default function HomePage() {
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-          const name = user.user_metadata?.full_name ?? user.user_metadata?.name ?? user.email?.split("@")[0] ?? "";
-          if (name) setDisplayName(name.split(" ")[0]);
+          const name = user.user_metadata?.name || user.user_metadata?.full_name;
+          if (name) setUserName(name.split(" ")[0]);
           if (user.user_metadata?.budget_limit) setBudgetLimit(Number(user.user_metadata.budget_limit));
           if (user.user_metadata?.notification_days) setNotificationDays(Number(user.user_metadata.notification_days));
         }
-      } catch (err) {}
+      } catch {
+        // ignore
+      } finally {
+        setIsUserLoading(false);
+      }
     }
     fetchUser();
   }, []);
+
+  const handleSaveBudget = async (value: number) => {
+    setBudgetLimit(value);
+    try {
+      const supabase = createClient();
+      await supabase.auth.updateUser({ data: { budget_limit: value } });
+    } catch {
+      // ignore
+    }
+  };
 
   const totalExpense = getTotalMonthlyExpense(expenses);
   const remainingBudget = budgetLimit - totalExpense;
@@ -176,8 +281,11 @@ export default function HomePage() {
   const visibleNotifications = allNotifications.filter((p) => !paidIds.has(p.id));
   const hasBell = visibleNotifications.length > 0;
 
+  const pastPayments = visibleNotifications.filter((p) => p.isPast);
+  const upcomingPayments = visibleNotifications.filter((p) => !p.isPast);
+
   const categoryData = expenses.reduce((acc, curr) => {
-    const label = curr.category === "digital" ? "Dijital" : curr.category === "bank" ? "Banka" : curr.category === "lifestyle" ? "Yaşam" : "Diğer";
+    const label = curr.category === "digital" ? "Dijital" : curr.category === "bank" ? "Banka" : curr.category === "social" ? "Sosyal" : curr.category === "travel" ? "Seyahat" : curr.category === "personal_care" ? "Kişisel Bakım" : "Diğer";
     acc[label] = (acc[label] || 0) + curr.amount;
     return acc;
   }, {} as Record<string, number>);
@@ -205,7 +313,7 @@ export default function HomePage() {
   };
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const tooltipFormatter = (value: any) => `₺${formatCurrency(Number(value) || 0)}`;
+  const tooltipFormatter = (value: any) => `${currencySymbol}${formatCurrency(Number(value) || 0)}`;
 
   const formatNotifDay = (p: UpcomingPayment) => {
     const day = new Date(p.dueDate).getDate();
@@ -214,12 +322,20 @@ export default function HomePage() {
     return `${p.daysUntil} gün sonra (Ayın ${day}'i)`;
   };
 
+  if (loading || isUserLoading) {
+    return (
+      <div className="flex min-h-[100dvh] items-center justify-center flex-col gap-4" style={{ backgroundColor: "var(--app-bg)" }}>
+        <Loader2 className="h-8 w-8 animate-spin text-indigo-500" />
+      </div>
+    );
+  }
+
   return (
     <div
       className="flex flex-col gap-6 px-4 pt-safe pb-28"
       style={{ backgroundColor: "var(--app-bg)", minHeight: "100dvh" }}
     >
-      {/* ─── Header ─────────────────────────────────────────── */}
+      {/* Header */}
       <header className="flex items-center justify-between pt-6">
         <div className="flex items-center gap-3">
           <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-gradient-to-br from-indigo-500 to-indigo-600 shadow-sm shrink-0">
@@ -231,7 +347,7 @@ export default function HomePage() {
           </div>
           <div className="flex flex-col gap-0.5">
             <h1 className="text-xl font-bold tracking-tight" style={{ color: "var(--app-text-primary)" }}>
-              {displayName ? `Merhaba, ${displayName}` : "Özet"}
+              {userName !== "İsimsiz Kullanıcı" ? `Merhaba, ${userName}` : "Özet"}
             </h1>
             <p className="text-[13px]" style={{ color: "var(--app-text-secondary)" }}>Aylık finansal durumunuz</p>
           </div>
@@ -274,22 +390,22 @@ export default function HomePage() {
 
                   {visibleNotifications.length > 0 ? (
                     <div className="flex flex-col gap-2 max-h-[340px] overflow-y-auto scrollbar-none">
-                      {visibleNotifications.some((p) => p.isPast) && (
+                      {pastPayments.length > 0 && (
                         <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 px-1 pt-1">
                           Geçen Ödemeler
                         </p>
                       )}
-                      {visibleNotifications.filter((p) => p.isPast).map((p) => (
-                        <NotifItem key={p.id} payment={p} label={formatNotifDay(p)} onPaid={handlePaid} past />
+                      {pastPayments.map((p) => (
+                        <NotifItem key={p.id} payment={p} label={formatNotifDay(p)} onPaid={handlePaid} past currencySymbol={currencySymbol} />
                       ))}
 
-                      {visibleNotifications.some((p) => !p.isPast) && (
+                      {upcomingPayments.length > 0 && (
                         <p className="text-[10px] font-bold uppercase tracking-widest text-zinc-500 px-1 pt-2">
                           Yaklaşan Ödemeler
                         </p>
                       )}
-                      {visibleNotifications.filter((p) => !p.isPast).map((p) => (
-                        <NotifItem key={p.id} payment={p} label={formatNotifDay(p)} onPaid={handlePaid} past={false} />
+                      {upcomingPayments.map((p) => (
+                        <NotifItem key={p.id} payment={p} label={formatNotifDay(p)} onPaid={handlePaid} past={false} currencySymbol={currencySymbol} />
                       ))}
                     </div>
                   ) : (
@@ -304,7 +420,7 @@ export default function HomePage() {
         </div>
       </header>
 
-      {/* ─── Monthly Total ───────────────────────────────────── */}
+      {/* Monthly Total + Budget */}
       <div
         className="relative overflow-hidden rounded-[32px] p-6 border backdrop-blur-xl"
         style={{ backgroundColor: "var(--app-card-bg)", borderColor: "var(--app-surface-border)" }}
@@ -315,7 +431,7 @@ export default function HomePage() {
           </span>
           <div className="flex items-baseline gap-2 mt-1">
             <span className="text-[40px] font-bold tracking-tight leading-none" style={{ color: "var(--app-text-primary)" }}>
-              ₺{formatCurrency(totalExpense)}
+              {currencySymbol}{formatCurrency(totalExpense)}
             </span>
           </div>
         </div>
@@ -324,12 +440,20 @@ export default function HomePage() {
             <div className="flex flex-col">
               <span className="text-[11px] uppercase tracking-wider font-medium" style={{ color: "var(--app-text-secondary)" }}>Kalan Bütçe</span>
               <span className={cn("text-sm font-semibold", isOverBudget ? "text-red-400" : "text-emerald-400")}>
-                ₺{formatCurrency(Math.abs(remainingBudget))} {isOverBudget && "Aşıldı"}
+                {currencySymbol}{formatCurrency(Math.abs(remainingBudget))} {isOverBudget && "Aşıldı"}
               </span>
             </div>
-            <span className="text-[11px] uppercase tracking-wider font-medium" style={{ color: "var(--app-text-secondary)" }}>
-              Limit: ₺{formatCurrency(budgetLimit)}
-            </span>
+            {/* Budget label with pencil edit */}
+            <button
+              onClick={() => setIsBudgetModalOpen(true)}
+              className="flex items-center gap-1.5 rounded-xl px-2 py-1 transition-colors active:scale-95"
+              style={{ color: "var(--app-text-secondary)" }}
+            >
+              <span className="text-[11px] uppercase tracking-wider font-medium">
+                Bütçe: {currencySymbol}{formatCurrency(budgetLimit)}
+              </span>
+              <Pencil className="h-3 w-3" />
+            </button>
           </div>
           <div className="h-1.5 w-full rounded-full overflow-hidden" style={{ backgroundColor: "var(--app-input-bg)" }}>
             <motion.div
@@ -342,7 +466,7 @@ export default function HomePage() {
         </div>
       </div>
 
-      {/* ─── Donut Chart ─────────────────────────────────────── */}
+      {/* Donut Chart */}
       <div
         className="rounded-[32px] p-6 border flex flex-col gap-2 backdrop-blur-xl"
         style={{ backgroundColor: "var(--app-card-bg)", borderColor: "var(--app-surface-border)" }}
@@ -367,10 +491,9 @@ export default function HomePage() {
                 <Legend content={renderCustomLegend} verticalAlign="bottom" height={36} />
               </PieChart>
             </ResponsiveContainer>
-            {/* Centered inside donut, above legend */}
             <div className="absolute inset-x-0 pointer-events-none flex flex-col items-center justify-center" style={{ top: 0, bottom: 36 }}>
               <span className="text-[10px] uppercase font-bold tracking-wider" style={{ color: "var(--app-text-secondary)" }}>Toplam</span>
-              <span className="text-lg font-bold leading-tight" style={{ color: "var(--app-text-primary)" }}>₺{formatCurrency(totalExpense)}</span>
+              <span className="text-lg font-bold leading-tight" style={{ color: "var(--app-text-primary)" }}>{currencySymbol}{formatCurrency(totalExpense)}</span>
             </div>
           </div>
         ) : (
@@ -380,65 +503,82 @@ export default function HomePage() {
         )}
       </div>
 
-      {/* ─── Son Eklenenler ───────────────────────────────────── */}
+      {/* ─── Yaklaşan / Geçen Ödemeler (Son Eklenenler'in yerini aldı) ────────── */}
       <div className="flex flex-col gap-3">
         <div className="flex items-center justify-between px-2">
           <h2 className="text-sm font-medium uppercase tracking-wide" style={{ color: "var(--app-text-secondary)" }}>
-            Son Eklenenler
+            Ödemeler
           </h2>
           <Link href="/abonelikler" className="text-xs font-medium text-indigo-400 hover:text-indigo-300">
             Tümünü Gör
           </Link>
         </div>
-        <div className="flex flex-col gap-2">
-          {expenses.slice(0, 3).map((expense) => {
-            const meta = CATEGORY_META[expense.category];
-            return (
+
+        {visibleNotifications.length === 0 && expenses.length === 0 ? (
+          <Link
+            href="/ekle"
+            className="group flex flex-col items-center justify-center gap-3 py-10 rounded-3xl border border-dashed transition-all active:scale-[0.98]"
+            style={{ backgroundColor: "var(--app-card-bg)", borderColor: "var(--app-surface-border)" }}
+          >
+            <div className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-500/10 text-indigo-500 group-hover:bg-indigo-500/20 transition-colors">
+              <Plus className="h-6 w-6" />
+            </div>
+            <span className="text-sm font-medium" style={{ color: "var(--app-text-secondary)" }}>
+              Henüz gider eklenmedi. Eklemek için dokunun.
+            </span>
+          </Link>
+        ) : (
+          <div className="flex flex-col gap-2">
+            {/* Geçen ödemeler */}
+            {pastPayments.length > 0 && (
+              <>
+                <p className="text-[10px] font-bold uppercase tracking-widest px-2" style={{ color: "var(--app-text-secondary)" }}>
+                  Geçen Ödemeler
+                </p>
+                {pastPayments.map((p) => (
+                  <NotifItem key={p.id} payment={p} label={formatNotifDay(p)} onPaid={handlePaid} past currencySymbol={currencySymbol} />
+                ))}
+              </>
+            )}
+
+            {/* Yaklaşan ödemeler */}
+            {upcomingPayments.length > 0 && (
+              <>
+                <p className={cn("text-[10px] font-bold uppercase tracking-widest px-2", pastPayments.length > 0 && "mt-2")} style={{ color: "var(--app-text-secondary)" }}>
+                  Yaklaşan Ödemeler
+                </p>
+                {upcomingPayments.map((p) => (
+                  <NotifItem key={p.id} payment={p} label={formatNotifDay(p)} onPaid={handlePaid} past={false} currencySymbol={currencySymbol} />
+                ))}
+              </>
+            )}
+
+            {/* No upcoming/past but has expenses */}
+            {visibleNotifications.length === 0 && expenses.length > 0 && (
               <div
-                key={expense.id}
-                className="flex h-[72px] items-center gap-4 rounded-3xl p-3 pr-5 border backdrop-blur-xl"
+                className="flex flex-col items-center justify-center py-8 rounded-3xl border border-dashed"
                 style={{ backgroundColor: "var(--app-card-bg)", borderColor: "var(--app-surface-border)" }}
               >
-                <div className="h-12 w-12 shrink-0">
-                  <BrandLogo domain={expense.domain} name={expense.name} fallbackIcon={expense.icon} fallbackColor={expense.color} />
-                </div>
-                <div className="flex flex-1 flex-col min-w-0 justify-center">
-                  <span className="text-[15px] font-medium truncate leading-snug" style={{ color: "var(--app-text-primary)" }}>
-                    {expense.name}
-                  </span>
-                  <div className="flex items-center gap-1.5 mt-0.5">
-                    <CategoryIcon category={expense.category} className="h-3 w-3" />
-                    <span className="text-xs truncate" style={{ color: "var(--app-text-secondary)" }}>
-                      {meta.label} • Ayın {expense.dueDay}. günü
-                    </span>
-                  </div>
-                </div>
-                <div className="flex items-center justify-center shrink-0">
-                  <div className="flex items-baseline gap-1">
-                    <span className="text-[15px] font-semibold" style={{ color: "var(--app-text-primary)" }}>
-                      ₺{formatCurrency(expense.amount)}
-                    </span>
-                  </div>
-                </div>
+                <p className="text-sm" style={{ color: "var(--app-text-secondary)" }}>
+                  Yaklaşan veya geçen ödeme yok.
+                </p>
               </div>
-            );
-          })}
-          {expenses.length === 0 && !loading && (
-            <Link
-              href="/ekle"
-              className="group flex flex-col items-center justify-center gap-3 py-10 rounded-3xl border border-dashed transition-all active:scale-[0.98]"
-              style={{ backgroundColor: "var(--app-card-bg)", borderColor: "var(--app-surface-border)" }}
-            >
-              <div className="flex h-12 w-12 items-center justify-center rounded-full bg-indigo-500/10 text-indigo-500 group-hover:bg-indigo-500/20 transition-colors">
-                <Plus className="h-6 w-6" />
-              </div>
-              <span className="text-sm font-medium" style={{ color: "var(--app-text-secondary)" }}>
-                Henüz gider eklenmedi. Eklemek için dokunun.
-              </span>
-            </Link>
-          )}
-        </div>
+            )}
+          </div>
+        )}
       </div>
+
+      {/* Budget Edit Modal */}
+      <AnimatePresence>
+        {isBudgetModalOpen && (
+          <BudgetEditModal
+            currentBudget={budgetLimit}
+            onSave={handleSaveBudget}
+            onClose={() => setIsBudgetModalOpen(false)}
+            currencySymbol={currencySymbol}
+          />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

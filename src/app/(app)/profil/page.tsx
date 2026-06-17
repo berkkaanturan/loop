@@ -7,29 +7,30 @@ import {
   Settings,
   User as UserIcon,
   Bell,
-  Wallet,
   Loader2,
   Sun,
   Moon,
+  Check,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { User } from "@supabase/supabase-js";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useTheme } from "@/lib/theme-context";
 import { cn } from "@/lib/utils";
 import { motion } from "framer-motion";
-
+import { CURRENCIES } from "@/lib/data";
+import { useExpenses } from "@/lib/expenses-context";
 export default function ProfilPage() {
   const router = useRouter();
+  const { setCurrency: setGlobalCurrency } = useExpenses();
   const { theme, setTheme } = useTheme();
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(true);
   const [loggingOut, setLoggingOut] = useState(false);
   const [savingConfig, setSavingConfig] = useState(false);
 
-  const [budgetLimit, setBudgetLimit] = useState("5000");
   const [notificationDays, setNotificationDays] = useState("7");
+  const [currency, setCurrency] = useState("TRY");
 
   useEffect(() => {
     async function loadUser() {
@@ -37,13 +38,17 @@ export default function ProfilPage() {
       const { data } = await supabase.auth.getUser();
       if (data.user) {
         setUser(data.user);
-        const limit = data.user.user_metadata?.budget_limit;
         const days = data.user.user_metadata?.notification_days;
-        if (limit) setBudgetLimit(limit.toString());
+        const cur = data.user.user_metadata?.currency;
         if (days) setNotificationDays(days.toString());
+        if (cur) setCurrency(cur);
       }
       setLoading(false);
     }
+    // Load currency from localStorage as well (instant, no flash)
+    const storedCurrency = localStorage.getItem("loop-currency");
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    if (storedCurrency) setCurrency(storedCurrency);
     loadUser();
   }, []);
 
@@ -60,18 +65,31 @@ export default function ProfilPage() {
     router.refresh();
   };
 
+  const handleCurrencyChange = async (newCurrency: string) => {
+    setCurrency(newCurrency);
+    setGlobalCurrency(newCurrency);
+    localStorage.setItem("loop-currency", newCurrency);
+    try {
+      const supabase = createClient();
+      await supabase.auth.updateUser({
+        data: { currency: newCurrency },
+      });
+    } catch (err) {
+      console.error("Para birimi güncellenemedi", err);
+    }
+  };
+
   const saveSettings = async () => {
     setSavingConfig(true);
     try {
       const supabase = createClient();
       const { error } = await supabase.auth.updateUser({
         data: {
-          budget_limit: Number(budgetLimit),
           notification_days: Number(notificationDays),
         },
       });
       if (error) throw error;
-      alert("Ayarlar kaydedildi.");
+      alert("Tercihler kaydedildi.");
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : "Bilinmeyen hata";
       alert(`Kaydedilirken hata: ${message}`);
@@ -115,6 +133,7 @@ export default function ProfilPage() {
           style={{ backgroundColor: "var(--app-input-bg)" }}
         >
           {avatarUrl ? (
+            // eslint-disable-next-line @next/next/no-img-element
             <img src={avatarUrl} alt="Avatar" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
           ) : (
             <UserIcon className="h-8 w-8" style={{ color: "var(--app-text-secondary)" }} />
@@ -144,7 +163,7 @@ export default function ProfilPage() {
             <motion.div
               layout
               className="absolute top-0 bottom-0 rounded-full shadow-sm"
-              style={{ backgroundColor: isDark ? "#27272a" : "#ffffff" }}
+              style={{ backgroundColor: isDark ? "var(--app-surface)" : "#ffffff" }}
               initial={false}
               animate={{ width: "50%", left: isDark ? "0%" : "50%" }}
               transition={{ type: "spring", stiffness: 400, damping: 30 }}
@@ -177,6 +196,46 @@ export default function ProfilPage() {
         </div>
       </div>
 
+      {/* Para Birimi */}
+      <div
+        className="flex flex-col gap-4 p-5 rounded-3xl border backdrop-blur-xl"
+        style={{ backgroundColor: "var(--app-surface)", borderColor: "var(--app-surface-border)" }}
+      >
+        <p className="text-sm font-semibold flex items-center gap-2" style={{ color: "var(--app-text-primary)" }}>
+          <span className="text-base leading-none">{CURRENCIES.find(c => c.code === currency)?.symbol ?? "₺"}</span>
+          Para Birimi
+        </p>
+        <div className="grid grid-cols-2 gap-2">
+          {CURRENCIES.map((cur) => {
+            const active = currency === cur.code;
+            return (
+              <button
+                key={cur.code}
+                type="button"
+                onClick={() => handleCurrencyChange(cur.code)}
+                className="flex h-14 items-center gap-3 rounded-2xl border px-4 transition-all active:scale-[0.98]"
+                style={
+                  active
+                    ? { borderColor: "#6366f1", backgroundColor: "rgba(99,102,241,0.1)" }
+                    : { borderColor: "var(--app-surface-border)", backgroundColor: "var(--app-input-bg)" }
+                }
+              >
+                <span className="text-2xl leading-none">{cur.flag}</span>
+                <div className="flex flex-col items-start gap-0.5 min-w-0">
+                  <span className="text-sm font-semibold" style={{ color: active ? "#818cf8" : "var(--app-text-primary)" }}>
+                    {cur.symbol} {cur.code}
+                  </span>
+                  <span className="text-[10px] truncate w-full" style={{ color: "var(--app-text-secondary)" }}>
+                    {cur.label}
+                  </span>
+                </div>
+                {active && <Check className="ml-auto h-4 w-4 text-indigo-500 shrink-0" />}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
       {/* Tercihler */}
       <div
         className="flex flex-col gap-5 p-5 rounded-3xl border backdrop-blur-xl"
@@ -189,26 +248,11 @@ export default function ProfilPage() {
 
         <div className="flex flex-col gap-2">
           <label className="text-sm flex items-center gap-2" style={{ color: "var(--app-text-secondary)" }}>
-            <Wallet className="h-4 w-4" /> Aylık Bütçe Limiti (₺)
-          </label>
-          <Input
-            type="number"
-            value={budgetLimit}
-            onChange={(e) => setBudgetLimit(e.target.value)}
-            className="h-12 rounded-xl border-0 text-sm font-medium"
-            style={{
-              backgroundColor: "var(--app-input-bg)",
-              color: "var(--app-text-primary)",
-            }}
-          />
-        </div>
-
-        <div className="flex flex-col gap-2">
-          <label className="text-sm flex items-center gap-2" style={{ color: "var(--app-text-secondary)" }}>
             <Bell className="h-4 w-4" /> Ödeme Hatırlatıcı (Gün)
           </label>
           <Input
             type="number"
+            inputMode="numeric"
             value={notificationDays}
             onChange={(e) => setNotificationDays(e.target.value)}
             className="h-12 rounded-xl border-0 text-sm font-medium"
@@ -234,23 +278,22 @@ export default function ProfilPage() {
         </button>
       </div>
 
-      {/* Çıkış */}
-      <div className="px-2">
-        <button
-          onClick={handleSignOut}
-          disabled={loggingOut}
-          className="flex h-12 items-center gap-2 text-red-500 font-medium transition-all active:scale-95 disabled:opacity-50 w-fit"
-        >
-          {loggingOut ? (
-            <Loader2 className="h-5 w-5 animate-spin" />
-          ) : (
-            <>
-              <LogOut className="h-5 w-5" />
-              <span>Çıkış Yap</span>
-            </>
-          )}
-        </button>
-      </div>
+      {/* Çıkış — tam genişlik, kırmızı bordered, simetrik */}
+      <button
+        onClick={handleSignOut}
+        disabled={loggingOut}
+        className="flex h-14 w-full items-center justify-center gap-2 rounded-2xl border font-semibold text-red-500 transition-all active:scale-[0.98] disabled:opacity-50"
+        style={{ borderColor: "rgba(239,68,68,0.3)", backgroundColor: "rgba(239,68,68,0.06)" }}
+      >
+        {loggingOut ? (
+          <Loader2 className="h-5 w-5 animate-spin" />
+        ) : (
+          <>
+            <LogOut className="h-5 w-5" />
+            <span>Çıkış Yap</span>
+          </>
+        )}
+      </button>
     </div>
   );
 }

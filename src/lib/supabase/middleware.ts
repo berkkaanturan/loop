@@ -8,7 +8,7 @@ const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
  * Routes that do NOT require authentication.
  * The middleware will allow these through without a session check.
  */
-const PUBLIC_ROUTES = ["/login", "/auth/callback"];
+const PUBLIC_ROUTES = ["/login", "/auth/callback", "/onboarding"];
 
 /**
  * Middleware-aware Supabase client.
@@ -57,11 +57,30 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(loginUrl);
   }
 
-  // ── Redirect already-logged-in users away from /login ─────────────────────
-  if (user && pathname === "/login") {
-    const homeUrl = request.nextUrl.clone();
-    homeUrl.pathname = "/";
-    return NextResponse.redirect(homeUrl);
+  // ── Handle Onboarding Flow for Authenticated Users ────────────────────────
+  if (user) {
+    const onboardingCompleted = user.user_metadata?.onboarding_completed === true;
+
+    // 1. Logged in, onboarding NOT completed, trying to access a restricted page (not onboarding/callback)
+    if (!onboardingCompleted && pathname !== "/onboarding" && pathname !== "/auth/callback") {
+      const onboardingUrl = request.nextUrl.clone();
+      onboardingUrl.pathname = "/onboarding";
+      return NextResponse.redirect(onboardingUrl);
+    }
+
+    // 2. Logged in, onboarding completed, trying to access /onboarding
+    if (onboardingCompleted && pathname === "/onboarding") {
+      const homeUrl = request.nextUrl.clone();
+      homeUrl.pathname = "/";
+      return NextResponse.redirect(homeUrl);
+    }
+    
+    // 3. Logged in, trying to access /login
+    if (pathname === "/login") {
+      const homeUrl = request.nextUrl.clone();
+      homeUrl.pathname = "/";
+      return NextResponse.redirect(homeUrl);
+    }
   }
 
   return supabaseResponse;

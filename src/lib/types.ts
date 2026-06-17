@@ -1,7 +1,7 @@
 // ─── DB-aligned types ─────────────────────────────────────────────────────────
 
 /** Category values matching the Supabase 'expenses' table CHECK constraint */
-export type ExpenseCategory = "digital" | "bank" | "lifestyle" | "other";
+export type ExpenseCategory = "digital" | "bank" | "social" | "travel" | "personal_care" | "other";
 
 /**
  * Supabase row — what we get back from the DB.
@@ -30,7 +30,6 @@ export interface Expense {
   name: string;
   category: ExpenseCategory;
   amount: number;
-  currency: "₺";
   dueDay: number;   // billing_day aliased for UI
   icon?: string;    // emoji or undefined
   color: string;    // Tailwind classes like "bg-red-500/15 text-red-400"
@@ -43,7 +42,6 @@ export interface UpcomingPayment {
   id: string;
   name: string;
   amount: number;
-  currency: "₺";
   dueDate: string; // ISO date string
   daysUntil: number; // negative = past
   isPast: boolean;

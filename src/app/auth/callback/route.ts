@@ -17,11 +17,11 @@ export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
   const code = searchParams.get("code");
   const forwardedHost = request.headers.get("x-forwarded-host");
-  const isLocalEnv = process.env.NODE_ENV === "development";
+  const isLocalEnv = process.env.NODE_ENV === "development" || (forwardedHost && (forwardedHost.includes("localhost") || forwardedHost.includes("127.0.0.1")));
   
   // Construct the correct origin even behind proxies (like Vercel)
   const origin = forwardedHost
-    ? `https://${forwardedHost}`
+    ? `${isLocalEnv ? "http" : "https"}://${forwardedHost}`
     : new URL(request.url).origin;
 
   // Optional: `next` param allows redirecting to a specific page after login

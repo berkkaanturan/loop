@@ -5,7 +5,7 @@ import { updateSession } from "@/lib/supabase/middleware";
  * Next.js Edge Proxy — runs before every matched request.
  * Delegates all auth logic (session refresh + route protection) to updateSession().
  */
-export async function proxy(request: NextRequest) {
+export async function middleware(request: NextRequest) {
   return await updateSession(request);
 }
 

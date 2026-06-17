@@ -1,16 +1,13 @@
 "use client";
 
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect, useCallback, useRef, Suspense } from "react";
 import { useSearchParams } from "next/navigation";
-import { Loader2, LayoutDashboard, BellRing, PieChart, ShieldCheck } from "lucide-react";
+import { Loader2, LayoutDashboard, BellRing, PieChart, ShieldCheck, MonitorSmartphone, Check } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
+import { BrandLogo } from "@/components/brand-logo";
 
-/**
- * Google SVG icon — inline to avoid external dependency.
- * Official Google "G" logo.
- */
 function GoogleIcon({ className }: { className?: string }) {
   return (
     <svg className={className} viewBox="0 0 24 24" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
@@ -22,59 +19,164 @@ function GoogleIcon({ className }: { className?: string }) {
   );
 }
 
+function AppleIcon({ className }: { className?: string }) {
+  return (
+    <svg className={className} viewBox="0 0 384 512" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="currentColor">
+      <path d="M318.7 268.7c-.2-36.7 16.4-64.4 50-84.8-18.8-26.9-47.2-41.7-84.7-44.6-35.5-2.8-74.3 20.7-88.5 20.7-15 0-49.4-19.7-76.4-19.7C63.3 141.2 4 184.8 4 273.5q0 39.3 14.4 81.2c12.8 36.7 59 126.7 107.2 125.2 25.2-.6 43-17.9 75.8-17.9 31.8 0 48.3 17.9 76.4 17.9 48.6-.7 90.4-82.5 102.6-119.3-65.2-30.7-61.7-90-61.7-91.9zm-56.6-164.2c27.3-32.4 24.8-61.9 24-72.5-24.1 1.4-52 16.4-67.9 34.9-17.5 19.8-27.8 44.3-25.6 71.9 26.1 2 49.9-11.4 69.5-34.3z" />
+    </svg>
+  );
+}
+
 const SWIPER_FEATURES = [
   {
-    icon: LayoutDashboard,
+    mockup: (
+      <div className="flex flex-col gap-2 w-full max-w-[280px]">
+        <div className="flex h-[64px] items-center gap-3 rounded-3xl p-2.5 pr-4 text-left border shadow-sm" style={{ backgroundColor: "var(--app-card-bg)", borderColor: "var(--app-surface-border)" }}>
+          <div className="h-10 w-10 shrink-0">
+            <BrandLogo domain="netflix.com" name="Netflix" fallbackIcon="MonitorSmartphone" />
+          </div>
+          <div className="flex flex-1 flex-col justify-center min-w-0">
+            <span className="text-[14px] font-medium truncate leading-snug" style={{ color: "var(--app-text-primary)" }}>Netflix</span>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <MonitorSmartphone className="h-[10px] w-[10px]" style={{ color: "var(--app-text-secondary)" }} />
+              <span className="text-[11px] truncate" style={{ color: "var(--app-text-secondary)" }}>Dijital • Ayın 15&apos;i</span>
+            </div>
+          </div>
+          <div className="flex items-center justify-center shrink-0">
+            <span className="text-[14px] font-semibold" style={{ color: "var(--app-text-primary)" }}>₺200</span>
+          </div>
+        </div>
+        <div className="flex h-[64px] items-center gap-3 rounded-3xl p-2.5 pr-4 text-left border shadow-sm opacity-60" style={{ backgroundColor: "var(--app-card-bg)", borderColor: "var(--app-surface-border)" }}>
+          <div className="h-10 w-10 shrink-0">
+            <BrandLogo domain="spotify.com" name="Spotify" />
+          </div>
+          <div className="flex flex-1 flex-col justify-center min-w-0">
+            <span className="text-[14px] font-medium truncate leading-snug" style={{ color: "var(--app-text-primary)" }}>Spotify</span>
+            <div className="flex items-center gap-1.5 mt-0.5">
+              <MonitorSmartphone className="h-[10px] w-[10px]" style={{ color: "var(--app-text-secondary)" }} />
+              <span className="text-[11px] truncate" style={{ color: "var(--app-text-secondary)" }}>Dijital • Ayın 20&apos;si</span>
+            </div>
+          </div>
+          <div className="flex items-center justify-center shrink-0">
+            <span className="text-[14px] font-semibold" style={{ color: "var(--app-text-primary)" }}>₺60</span>
+          </div>
+        </div>
+      </div>
+    ),
     title: "Tek Ekranda Kontrol",
     description: "Tüm abonelik ve faturalarınızı tek bir noktadan kolayca yönetin.",
   },
   {
-    icon: BellRing,
+    mockup: (
+      <div className="flex flex-col gap-2 w-full max-w-[280px]">
+        <div className="flex h-[64px] items-center gap-3 rounded-3xl p-2.5 pr-4 text-left border shadow-sm" style={{ backgroundColor: "var(--app-card-bg)", borderColor: "var(--app-surface-border)" }}>
+          <div className="h-10 w-10 shrink-0">
+            <BrandLogo domain="spotify.com" name="Spotify" />
+          </div>
+          <div className="flex flex-1 flex-col justify-center min-w-0">
+            <span className="text-[14px] font-medium truncate leading-snug" style={{ color: "var(--app-text-primary)" }}>Spotify</span>
+            <span className="text-[11px] font-semibold text-orange-500 mt-0.5">2 gün sonra</span>
+          </div>
+          <div className="flex items-center justify-center shrink-0">
+            <span className="text-[14px] font-semibold" style={{ color: "var(--app-text-primary)" }}>₺60</span>
+          </div>
+        </div>
+        <div className="flex h-[64px] items-center gap-3 rounded-3xl p-2.5 pr-4 text-left border shadow-sm opacity-60" style={{ backgroundColor: "var(--app-card-bg)", borderColor: "var(--app-surface-border)" }}>
+          <div className="h-10 w-10 shrink-0">
+            <BrandLogo domain="netflix.com" name="Netflix" />
+          </div>
+          <div className="flex flex-1 flex-col justify-center min-w-0">
+            <span className="text-[14px] font-medium truncate leading-snug" style={{ color: "var(--app-text-secondary)" }}>Netflix</span>
+            <span className="text-[11px] font-semibold text-emerald-500 mt-0.5">Ödendi</span>
+          </div>
+          <div className="flex items-center justify-center shrink-0">
+            <Check className="h-4 w-4 text-emerald-500" />
+          </div>
+        </div>
+      </div>
+    ),
     title: "Akıllı Hatırlatıcı",
     description: "Ödeme günlerini kaçırmayın, gecikme faizlerinden kurtulun.",
   },
   {
-    icon: PieChart,
+    mockup: (
+      <div className="flex flex-col gap-3 w-full max-w-[280px]">
+        <div className="flex flex-col p-4 w-full rounded-3xl border shadow-sm gap-3" style={{ backgroundColor: "var(--app-card-bg)", borderColor: "var(--app-surface-border)" }}>
+           <div className="w-full flex justify-between items-end">
+             <div className="flex flex-col items-start gap-1">
+               <span className="text-[11px] font-medium uppercase tracking-wide" style={{ color: "var(--app-text-secondary)" }}>Kalan Bütçe</span>
+               <span className="text-[18px] font-bold" style={{ color: "var(--app-text-primary)" }}>₺2.400 <span className="text-[12px] font-medium opacity-50">/ ₺5.000</span></span>
+             </div>
+             <PieChart className="h-7 w-7 text-indigo-500 opacity-80" />
+           </div>
+           <div className="h-2 w-full rounded-full overflow-hidden" style={{ backgroundColor: "var(--app-input-bg)" }}>
+             <div className="h-full bg-indigo-500 rounded-full" style={{ width: "52%" }} />
+           </div>
+        </div>
+      </div>
+    ),
     title: "Bütçe ve Analiz",
     description: "Harcamalarınızı kategorilere göre inceleyin, bütçenizi koruyun.",
   },
   {
-    icon: ShieldCheck,
+    mockup: (
+      <div className="flex flex-col gap-2 w-full max-w-[220px] items-center justify-center">
+         <div className="flex items-center justify-center h-[64px] w-[64px] rounded-[22px] border shadow-sm relative overflow-hidden mb-2" style={{ backgroundColor: "var(--app-card-bg)", borderColor: "var(--app-surface-border)" }}>
+           <ShieldCheck className="h-8 w-8 text-emerald-500 relative z-10" />
+           <div className="absolute inset-0 bg-emerald-500/10" />
+         </div>
+         <div className="px-3 py-1.5 rounded-full border text-[11px] font-bold text-emerald-500 bg-emerald-500/10 border-emerald-500/20">
+           Uçtan Uca Şifreli
+         </div>
+      </div>
+    ),
     title: "Güvenli ve Özel",
     description: "Verileriniz size özel şifrelenir, sadece siz erişebilirsiniz.",
   },
 ];
 
 function LoginContent() {
-  const [loading, setLoading] = useState(false);
+  const [loadingGoogle, setLoadingGoogle] = useState(false);
+  const [loadingApple, setLoadingApple] = useState(false);
   const searchParams = useSearchParams();
   const [activeIndex, setActiveIndex] = useState(0);
+  const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // Show error toast if redirected back with ?hata=auth
   useEffect(() => {
     if (searchParams.get("hata") === "auth") {
       alert("Giriş sırasında bir hata oluştu. Lütfen tekrar deneyin.");
     }
   }, [searchParams]);
 
-  // Auto-advance swiper
-  useEffect(() => {
-    const interval = setInterval(() => {
+  const startInterval = useCallback(() => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    intervalRef.current = setInterval(() => {
       setActiveIndex((prev) => (prev + 1) % SWIPER_FEATURES.length);
     }, 4000);
-    return () => clearInterval(interval);
   }, []);
 
-  const handleDragEnd = (event: MouseEvent | TouchEvent | PointerEvent, info: { offset: { x: number; y: number } }) => {
+  useEffect(() => {
+    startInterval();
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [startInterval]);
+
+  const goToIndex = useCallback((index: number) => {
+    setActiveIndex(index);
+    startInterval(); // reset timer on manual change
+  }, [startInterval]);
+
+  const handleDragEnd = (_event: MouseEvent | TouchEvent | PointerEvent, info: { offset: { x: number; y: number } }) => {
     if (info.offset.x < -50) {
-      setActiveIndex((prev) => (prev + 1) % SWIPER_FEATURES.length);
+      goToIndex((activeIndex + 1) % SWIPER_FEATURES.length);
     } else if (info.offset.x > 50) {
-      setActiveIndex((prev) => (prev - 1 + SWIPER_FEATURES.length) % SWIPER_FEATURES.length);
+      goToIndex((activeIndex - 1 + SWIPER_FEATURES.length) % SWIPER_FEATURES.length);
     }
   };
 
   async function handleGoogleLogin() {
-    setLoading(true);
+    setLoadingGoogle(true);
     const supabase = createClient();
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -87,22 +189,28 @@ function LoginContent() {
     if (error) {
       console.error("Google OAuth hatası:", error);
       alert("Google ile bağlantı kurulamadı. Lütfen tekrar deneyin.");
-      setLoading(false);
+      setLoadingGoogle(false);
     }
   }
+
+  async function handleAppleLogin() {
+    alert("Yakında eklenecek!");
+  }
+
+  const isLoading = loadingGoogle || loadingApple;
 
   return (
     <div
       className="relative flex min-h-screen flex-col items-center justify-between overflow-hidden px-6 pb-safe pt-8"
       style={{ backgroundColor: "var(--app-bg)", color: "var(--app-text-primary)" }}
     >
-      {/* ── Ambient background glows ─────────────────────────── */}
+      {/* Ambient background glows */}
       <div aria-hidden="true" className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute -left-32 -top-32 h-96 w-96 rounded-full bg-indigo-600/20 blur-3xl" />
         <div className="absolute -bottom-32 -right-16 h-80 w-80 rounded-full bg-indigo-600/10 blur-3xl" />
       </div>
 
-      {/* ── Top section: Logo ────────────────────────────────── */}
+      {/* Logo */}
       <div className="relative z-10 flex flex-col items-center w-full max-w-sm mt-24">
         <div className="relative flex h-[120px] w-[120px] items-center justify-center">
           <div className="absolute inset-0 rounded-[40px] bg-gradient-to-br from-indigo-500 to-indigo-600 opacity-20 blur-xl" />
@@ -119,9 +227,9 @@ function LoginContent() {
         </div>
       </div>
 
-      {/* ── Middle section: Swiper ───────────────────────────── */}
-      <div className="relative z-10 flex w-full max-w-sm flex-col items-center justify-center min-h-[220px]">
-        <div className="relative w-full h-[160px] flex items-center justify-center">
+      {/* Swiper */}
+      <div className="relative z-10 flex w-full max-w-sm flex-col items-center justify-center min-h-[260px] mt-4">
+        <div className="relative w-full h-[200px] flex items-center justify-center">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeIndex}
@@ -135,14 +243,8 @@ function LoginContent() {
               onDragEnd={handleDragEnd}
               className="absolute inset-0 flex flex-col items-center text-center justify-center px-4 cursor-grab active:cursor-grabbing"
             >
-              <div
-                className="flex h-16 w-16 items-center justify-center rounded-[24px] mb-5 backdrop-blur-xl border shadow-sm"
-                style={{ backgroundColor: "var(--app-surface)", borderColor: "var(--app-surface-border)" }}
-              >
-                {(() => {
-                  const Icon = SWIPER_FEATURES[activeIndex].icon;
-                  return <Icon className="h-7 w-7" style={{ color: "var(--app-text-primary)" }} strokeWidth={1.5} />;
-                })()}
+              <div className="flex h-[110px] items-center justify-center mb-4 w-full">
+                {SWIPER_FEATURES[activeIndex].mockup}
               </div>
               <h2 className="text-xl font-bold mb-2">
                 {SWIPER_FEATURES[activeIndex].title}
@@ -159,7 +261,7 @@ function LoginContent() {
           {SWIPER_FEATURES.map((_, i) => (
             <button
               key={i}
-              onClick={() => setActiveIndex(i)}
+              onClick={() => goToIndex(i)}
               className={cn(
                 "h-1.5 rounded-full transition-all duration-300",
                 i === activeIndex ? "w-6 bg-indigo-500" : "w-1.5"
@@ -171,15 +273,16 @@ function LoginContent() {
         </div>
       </div>
 
-      {/* ── Bottom section: CTA ──────────────────────────────── */}
-      <div className="relative z-10 flex w-full max-w-sm flex-col gap-5 mb-10">
+      {/* CTA Buttons */}
+      <div className="relative z-10 flex w-full max-w-sm flex-col gap-3 mb-10">
+        {/* Google */}
         <button
           onClick={handleGoogleLogin}
-          disabled={loading}
+          disabled={isLoading}
           className="group relative flex h-[56px] w-full items-center justify-center gap-3 overflow-hidden rounded-[20px] shadow-xl transition-all duration-200 active:scale-[0.97] disabled:opacity-70"
           style={{ backgroundColor: "var(--app-text-primary)", color: "var(--app-bg)" }}
         >
-          {loading ? (
+          {loadingGoogle ? (
             <Loader2 className="h-5 w-5 animate-spin" />
           ) : (
             <div className="flex h-8 w-8 items-center justify-center rounded-full bg-white">
@@ -187,7 +290,24 @@ function LoginContent() {
             </div>
           )}
           <span className="font-semibold text-[15px]">
-            {loading ? "Yönlendiriliyor…" : "Google ile Devam Et"}
+            {loadingGoogle ? "Yönlendiriliyor…" : "Google ile Devam Et"}
+          </span>
+        </button>
+
+        {/* Apple */}
+        <button
+          onClick={handleAppleLogin}
+          disabled={isLoading}
+          className="group relative flex h-[56px] w-full items-center justify-center gap-3 overflow-hidden rounded-[20px] border transition-all duration-200 active:scale-[0.97] disabled:opacity-70"
+          style={{ backgroundColor: "var(--app-surface)", borderColor: "var(--app-surface-border)", color: "var(--app-text-primary)" }}
+        >
+          {loadingApple ? (
+            <Loader2 className="h-5 w-5 animate-spin" />
+          ) : (
+            <AppleIcon className="h-6 w-6 shrink-0" />
+          )}
+          <span className="font-semibold text-[15px]">
+            {loadingApple ? "Yönlendiriliyor…" : "Apple ile Devam Et"}
           </span>
         </button>
 

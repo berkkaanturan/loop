@@ -1,4 +1,4 @@
-import { MonitorSmartphone, Landmark, Coffee, Package } from "lucide-react";
+import { MonitorSmartphone, Landmark, Coffee, Package, Plane, Sparkles, Layers } from "lucide-react";
 import { ExpenseCategory } from "@/lib/types";
 import { cn } from "@/lib/utils";
 
@@ -9,9 +9,14 @@ export function CategoryIcon({ category, className }: { category: ExpenseCategor
       return <MonitorSmartphone className={baseClass} />;
     case "bank":
       return <Landmark className={baseClass} />;
-    case "lifestyle":
+    case "social":
       return <Coffee className={baseClass} />;
+    case "travel":
+      return <Plane className={baseClass} />;
+    case "personal_care":
+      return <Sparkles className={baseClass} />;
     case "all":
+      return <Layers className={baseClass} />;
     case "other":
     default:
       return <Package className={baseClass} />;

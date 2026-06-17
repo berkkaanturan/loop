@@ -14,7 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "LOOP — Aylık Gider Takibi",
+  title: "Loop",
   description:
     "Aylık sabit giderlerinizi ve aboneliklerinizi kolayca takip edin.",
 };

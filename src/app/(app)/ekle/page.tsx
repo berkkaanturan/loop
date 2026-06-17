@@ -21,18 +21,27 @@ import { useExpenses } from "@/lib/expenses-context";
 import { cn } from "@/lib/utils";
 import { motion, AnimatePresence } from "framer-motion";
 
-const POPULAR_PRESETS = [
-  { name: "Netflix", domain: "netflix.com", icon: "🎬", color: "bg-red-500/15 text-red-500", category: "digital" as ExpenseCategory },
-  { name: "Spotify", domain: "spotify.com", icon: "🎧", color: "bg-green-500/15 text-green-500", category: "digital" as ExpenseCategory },
-  { name: "YouTube", domain: "youtube.com", icon: "▶️", color: "bg-red-600/15 text-red-600", category: "digital" as ExpenseCategory },
-  { name: "HBO", domain: "hbo.com", icon: "📺", color: "bg-purple-500/15 text-purple-500", category: "digital" as ExpenseCategory },
+const SUBSCRIPTION_PRESETS = [
+  { name: "Netflix", domain: "netflix.com", category: "digital" as ExpenseCategory, expenseType: "subscription" as const },
+  { name: "Spotify", domain: "spotify.com", category: "digital" as ExpenseCategory, expenseType: "subscription" as const },
+  { name: "YouTube Premium", domain: "youtube.com", category: "digital" as ExpenseCategory, expenseType: "subscription" as const },
+  { name: "Disney+", domain: "disneyplus.com", category: "digital" as ExpenseCategory, expenseType: "subscription" as const },
+  { name: "ChatGPT", domain: "openai.com", category: "digital" as ExpenseCategory, expenseType: "subscription" as const },
 ];
 
-type Preset = typeof POPULAR_PRESETS[0];
+const BILL_PRESETS = [
+  { name: "Turkcell", domain: "turkcell.com.tr", category: "digital" as ExpenseCategory, expenseType: "bill" as const },
+  { name: "Türk Telekom", domain: "turktelekom.com.tr", category: "digital" as ExpenseCategory, expenseType: "bill" as const },
+  { name: "Vodafone", domain: "vodafone.com.tr", category: "digital" as ExpenseCategory, expenseType: "bill" as const },
+  { name: "Elektrik Faturası", domain: undefined, category: "other" as ExpenseCategory, expenseType: "bill" as const },
+  { name: "Doğalgaz Faturası", domain: undefined, category: "other" as ExpenseCategory, expenseType: "bill" as const },
+];
+
+type Preset = { name: string; domain?: string; category: ExpenseCategory; expenseType: "subscription" | "bill" };
 
 export default function EklePage() {
   const router = useRouter();
-  const { refreshExpenses } = useExpenses();
+  const { refreshExpenses, currencySymbol, currency } = useExpenses();
 
   const [form, setForm] = useState<NewExpenseForm>({
     name: "",
@@ -129,7 +138,7 @@ export default function EklePage() {
       name: preset.name,
       domain: preset.domain,
       category: preset.category,
-      expense_type: "subscription",
+      expense_type: preset.expenseType,
     }));
   };
 
@@ -197,7 +206,7 @@ export default function EklePage() {
 
         {/* Hızlı Öneriler (Presets) */}
         <div className="flex gap-2 overflow-x-auto scrollbar-none pb-1 -mx-4 px-4">
-          {POPULAR_PRESETS.map((preset) => (
+          {(form.expense_type === "bill" ? BILL_PRESETS : SUBSCRIPTION_PRESETS).map((preset) => (
             <button
               key={preset.name}
               type="button"
@@ -261,7 +270,14 @@ export default function EklePage() {
                         key={suggestion.name}
                         type="button"
                         onClick={() => {
-                          setForm({ ...form, name: suggestion.name, domain: suggestion.domain, category: suggestion.category });
+                          setForm({
+                            ...form,
+                            name: suggestion.name,
+                            domain: suggestion.domain,
+                            category: suggestion.category,
+                            // Auto-switch expense_type if the preset knows it
+                            expense_type: suggestion.expenseType ?? form.expense_type,
+                          });
                           setIsFocused(false);
                         }}
                         className="flex items-center gap-3 px-4 py-3 text-left transition-colors hover:bg-white/5"
@@ -280,7 +296,7 @@ export default function EklePage() {
             {/* Tutar */}
             <div className="flex flex-col gap-2">
               <label htmlFor="amount" className="text-sm font-medium" style={{ color: "var(--app-text-secondary)" }}>
-                Aylık Tutar (₺)
+                Aylık Tutar ({currencySymbol})
               </label>
               <div className="relative flex items-center">
                 <Wallet className="absolute left-4 h-5 w-5" style={{ color: "var(--app-text-secondary)" }} />
@@ -297,7 +313,7 @@ export default function EklePage() {
                   style={{ backgroundColor: "var(--app-input-bg)", color: "var(--app-text-primary)" }}
                   placeholder="0.00"
                 />
-                <div className="absolute right-4 font-medium" style={{ color: "var(--app-text-secondary)" }}>TRY</div>
+                <div className="absolute right-4 font-medium" style={{ color: "var(--app-text-secondary)" }}>{currency}</div>
               </div>
             </div>
 
@@ -367,7 +383,9 @@ export default function EklePage() {
                 {[
                   { id: "digital", label: "Dijital" },
                   { id: "bank", label: "Banka" },
-                  { id: "lifestyle", label: "Yaşam" },
+                  { id: "social", label: "Sosyal" },
+                  { id: "travel", label: "Seyahat" },
+                  { id: "personal_care", label: "Kişisel Bakım" },
                   { id: "other", label: "Diğer" },
                 ].map((cat) => (
                   <button
